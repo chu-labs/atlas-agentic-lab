@@ -8,3 +8,18 @@ signal: BusinessRuleViolation quote.allocation_mismatch on POST /api/policies/{n
 root_cause: allocate() takes a float "fast path" above 50 lots; binary floating point cannot represent cents, so the schedule no longer sums to the premium.
 expected_fix: Decimal arithmetic with cent-exact remainder distribution and a property-style test over awkward lot counts.
 expected_agent_behaviour: fix
+workbench_ticket:
+  type: Bug
+  priority: High
+  reporter: priya
+  assignee: maroun
+  labels: [pricing, renewals, workbench]
+  title: "Lot schedule on large strata plans no longer adds up to the premium"
+  description: |
+    Since the last release, renewal quotes for large plans come back with a per-lot schedule that
+    does not sum to the annual premium. Broker complaint on Harbourview Towers (113 lots): premium
+    $61,412.20 but the lot schedule totals $61,412.2000000000001 and the invoice run rejected it.
+    Smaller plans (under ~50 lots) look fine.
+
+    Please make the schedule cent-exact again for every lot count, and add tests so this cannot
+    regress. Do not change the rating itself.

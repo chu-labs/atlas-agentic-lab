@@ -156,6 +156,41 @@ def converge_branches(ticket: str, into: str | None = None) -> str:
 
 
 @mcp.tool()
+def open_pr(ticket: str, branch: str, title: str, body: str) -> str:
+    """Push `branch` and open the pull request as the lab's GitHub App (not as you), so the human gate applies.
+
+    Use after converge_branches and a green test run. The body should have Root cause / Fix / Test / Not changed
+    sections and say the work was done by a supervised Workbench team. Announces pr.opened on the lab bus so
+    Sentinel reviews it and Mission Control shows it at the gate.
+    """
+    from .github import push_and_open_pr
+
+    repo = _repo()
+    full_body = body + f"\n\n---\nOpened by the **Workbench** (supervised mode): the presenter's Claude Code session converged the work of analyst, tester, builder and reviewer teammates on their own worktrees. Authority: humans approve; nobody here can merge. Ticket: {ticket}\n"
+    pr = push_and_open_pr(repo, branch, f"{ticket}: {title}", full_body)
+    _emit_workbench("pr.opened", ticket, f"Workbench opened PR #{pr['number']} from converged branch {branch}",
+                    pr={"number": pr["number"], "url": pr["html_url"], "branch": branch, "title": pr["title"], "head_sha": pr["head"]["sha"]})
+    _emit_workbench("agent.status", ticket, f"PR #{pr['number']} open; waiting for Sentinel and a human", status="waiting_on_human", thinking=f"PR #{pr['number']} at the gate")
+    return f"PR #{pr['number']} opened: {pr['html_url']}"
+
+
+def _emit_workbench(detail_type: str, ticket: str, summary: str, **extra) -> None:
+    bus = os.environ.get("EVENT_BUS")
+    if not bus:
+        return
+    try:
+        import boto3
+        from datetime import UTC, datetime
+
+        detail = {"ts": datetime.now(UTC).isoformat(), "actor": {"handle": "workbench", "kind": "agent", "display_name": "Workbench", "mode": "supervised"}, "ticket": ticket, "summary": summary, **extra}
+        boto3.client("events", region_name=os.environ.get("AWS_REGION", "ap-southeast-2")).put_events(
+            Entries=[{"Source": "atlas.workbench", "DetailType": detail_type, "EventBusName": bus, "Detail": json.dumps(detail)}]
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
+@mcp.tool()
 def close_teammates(ticket: str | None = None) -> str:
     """Kill teammate panes and remove their worktrees (branches are kept)."""
     n = 0

@@ -70,12 +70,14 @@ def baseline_set(image: str | None = None, force: bool = False) -> dict:
     return state.save(baseline_sha=sha, baseline_image=image, injected=None)
 
 
-def inject(defect_id: str, no_deploy: bool = False) -> dict:
+def inject(defect_id: str, no_deploy: bool = False, workbench: bool = False) -> dict:
     d = get(defect_id)
     st = state.load()
     if not st.get("baseline_sha"):
         baseline_set()
         st = state.load()
+    if workbench:
+        return _inject_for_workbench(d, st)
     if st.get("injected"):
         raise SystemExit(f"{st['injected']['id']} is already injected; run `labctl reset` first")
 
@@ -116,6 +118,44 @@ def inject(defect_id: str, no_deploy: bool = False) -> dict:
         ecs.rollout("atlas-platform", arn, desired=1, wait=True)
     bus.emit("defect.injected", f"Injected defect '{d['id']}' into production ({d['title']})", defect=d["id"], sha=sha, image=image)
     return state.save(injected={"id": d["id"], "sha": sha, "image": image, "data": bool(d.get("data_sql")), "at": time.time()})
+
+
+def _file_ticket(t: dict, source: dict) -> str:
+    board = outputs().urls["atlas-board"]
+    r = httpx.post(
+        f"{board}/api/issues",
+        auth=_basic_auth(),
+        headers={"X-Actor": t.get("reporter", "alex")},
+        json={
+            "type": t.get("type", "Bug"), "title": t["title"], "description": t["description"], "priority": t.get("priority", "High"),
+            "labels": t.get("labels", []), "assignee": t.get("assignee"), "source": source,
+        },
+        timeout=20,
+    )
+    r.raise_for_status()
+    return r.json()["key"]
+
+
+def _inject_for_workbench(d: dict, st: dict) -> dict:
+    """Supervised story: the defect lands on main (no deploy, no production errors) and a human files a ticket.
+
+    The fleet ignores it (assigned to a human); the presenter assembles a Workbench team for it.
+    """
+    if st.get("workbench_injected"):
+        raise SystemExit(f"{st['workbench_injected']['id']} is already injected for the workbench; run `labctl reset` first")
+    t = d.get("workbench_ticket") or d.get("ticket")
+    if not t:
+        raise SystemExit(f"{d['id']} has no workbench_ticket block")
+    ensure_clone()
+    if d.get("patch"):
+        subprocess.run(["git", "apply", str(d["dir"] / d["patch"])], cwd=CLONE, check=True)
+        _git("add", "-A")
+        _git("commit", "--quiet", "-m", f"{d['commit_message']}\n\n[skip ci]")
+        _git("push", "--quiet", "origin", "main")
+    sha = _git("rev-parse", "HEAD")
+    key = _file_ticket(t, {"kind": "human_report", "defect": d["id"], "mode": "supervised"})
+    bus.emit("defect.injected", f"Workbench: {t.get('reporter')} filed {key} ({t['title']}); defect on main, not deployed", defect=d["id"], ticket=key, sha=sha, mode="supervised")
+    return state.save(workbench_injected={"id": d["id"], "ticket": key, "sha": sha, "at": time.time()})
 
 
 def reset(reseed: bool | None = None) -> list[str]:
@@ -163,7 +203,7 @@ def reset(reseed: bool | None = None) -> list[str]:
                 step(msg)
             except Exception as e:  # noqa: BLE001
                 step(f"FAILED: {type(e).__name__}: {str(e)[:120]}")
-    state.save(injected=None)
+    state.save(injected=None, workbench_injected=None)
     bus.emit("lab.reset", "Lab reset to clean state", seconds=round(time.time() - t0, 1))
     step("done")
     return steps

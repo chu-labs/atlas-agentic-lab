@@ -201,7 +201,8 @@ def _basic_auth() -> tuple[str, str]:
 @click.argument("defect_id", required=False)
 @click.option("--no-deploy", is_flag=True, help="Push the defective commit but do not deploy it")
 @click.option("--list", "list_", is_flag=True, help="List available defects")
-def inject(defect_id, no_deploy, list_):
+@click.option("--workbench", is_flag=True, help="Supervised story: defect on main only, a human files the ticket, no deploy")
+def inject(defect_id, no_deploy, list_, workbench):
     """Deploy a defective build to production and start the traffic that triggers it."""
     from . import defects, traffic
     from .config import outputs as o
@@ -212,8 +213,10 @@ def inject(defect_id, no_deploy, list_):
             t.add_row(d["id"], d["difficulty"], d["title"], d.get("expected_agent_behaviour", "fix"))
         console.print(t)
         return
-    st = defects.inject(defect_id, no_deploy=no_deploy)
-    console.print(f"[yellow]injected[/] {st['injected']}")
+    st = defects.inject(defect_id, no_deploy=no_deploy, workbench=workbench)
+    console.print(f"[yellow]injected[/] {st['workbench_injected'] if workbench else st['injected']}")
+    if workbench:
+        return
     if not traffic.running():
         user, pw = _basic_auth()
         traffic.start(o().urls["atlas-platform"], user, pw, 3.0)

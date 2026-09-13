@@ -8,7 +8,7 @@ locals {
   rules = {
     mission-events = { pattern = { source = [{ prefix = "atlas." }] } }
     forge          = { pattern = { source = ["atlas.board", "atlas.sentinel", "atlas.workbench"], detail-type = ["issue.assigned", "review.changes_requested", "workbench.dispatch"] } }
-    sentinel       = { pattern = { source = ["atlas.forge"], detail-type = ["pr.opened", "pr.updated"] } }
+    sentinel       = { pattern = { source = ["atlas.forge", "atlas.workbench"], detail-type = ["pr.opened", "pr.updated"] } }
     conductor      = { pattern = { source = ["atlas.mission-control", "atlas.github"], detail-type = ["human.approved", "pr.merged", "deploy.completed"] } }
     watchtower     = { pattern = { source = ["atlas.scout"], detail-type = ["incident.threshold_crossed", "incident.resolved"] } }
   }
