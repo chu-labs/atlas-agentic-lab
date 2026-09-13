@@ -65,7 +65,7 @@ data "aws_iam_policy_document" "task" {
   }
   statement {
     sid       = "ReadLab"
-    actions   = ["ecs:DescribeServices", "ecs:DescribeTasks", "ecs:ListTasks", "ecs:DescribeTaskDefinition", "elasticloadbalancing:DescribeTargetHealth", "logs:GetLogEvents", "logs:FilterLogEvents"]
+    actions   = ["ecs:DescribeServices", "ecs:DescribeTasks", "ecs:ListTasks", "ecs:DescribeTaskDefinition", "ecs:ListServices", "elasticloadbalancing:DescribeTargetHealth", "elasticloadbalancing:DescribeTargetGroups", "elasticloadbalancing:DescribeLoadBalancers", "cloudwatch:GetMetricData", "cloudwatch:ListMetrics", "logs:GetLogEvents", "logs:FilterLogEvents"]
     resources = ["*"]
   }
   statement {

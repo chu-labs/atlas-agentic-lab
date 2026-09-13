@@ -26,6 +26,8 @@ locals {
     QUEUE_URL_SENTINEL    = aws_sqs_queue.q["sentinel"].id
     QUEUE_URL_CONDUCTOR   = aws_sqs_queue.q["conductor"].id
     BOARD_URL             = "http://${aws_lb.lab.dns_name}:8081"
+    ALB_ARN_SUFFIX        = aws_lb.lab.arn_suffix
+    TARGET_GROUP_SUFFIXES = join(",", [for k, tg in aws_lb_target_group.web : "${k}=${tg.arn_suffix}"])
     PLATFORM_URL          = "http://${aws_lb.lab.dns_name}:8082"
     SECRET_ANTHROPIC      = aws_secretsmanager_secret.s["anthropic-api-key"].arn
     SECRET_GITHUB_APP     = aws_secretsmanager_secret.s["github-app"].arn

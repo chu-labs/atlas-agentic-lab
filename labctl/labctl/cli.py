@@ -418,6 +418,30 @@ def demo_storm(record_name):
     d.run(["zero-lots", "float-premium", "n-plus-one"], name=record_name)
 
 
+@main.group()
+def chaos():
+    """Infrastructure incidents on demand (kill a task, short outage)."""
+
+
+@chaos.command("kill-task")
+@click.option("--service", default="atlas-platform", show_default=True)
+def chaos_kill(service):
+    """Stop the running task; ECS replaces it in ~1 min while the ALB serves 503s."""
+    from . import chaos as c
+
+    console.print(c.kill_task(service))
+
+
+@chaos.command("outage")
+@click.option("--service", default="atlas-platform", show_default=True)
+@click.option("--seconds", default=90, show_default=True)
+def chaos_outage(service, seconds):
+    """Scale a service to zero for a while, then back."""
+    from . import chaos as c
+
+    console.print(c.scale_down(service, seconds))
+
+
 @main.command()
 def outputs():
     """Show Terraform outputs the lab runs on."""
