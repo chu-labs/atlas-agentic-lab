@@ -24,7 +24,8 @@ def secrets():
 @click.option("--anthropic", is_flag=True, help="Push ANTHROPIC_API_KEY from the environment")
 @click.option("--github-app", is_flag=True, help="Push the GitHub App from ~/.config/atlas-lab")
 @click.option("--basic-auth", nargs=2, metavar="USER PASS", help="Push the ALB basic-auth credential")
-def secrets_push(anthropic, github_app, basic_auth):
+@click.option("--github-human", is_flag=True, help="Push GITHUB_HUMAN_TOKEN (fine-grained PAT) and GITHUB_HUMAN_LOGIN from the environment")
+def secrets_push(anthropic, github_app, basic_auth, github_human):
     from . import secrets as s
 
     if anthropic:
@@ -34,8 +35,12 @@ def secrets_push(anthropic, github_app, basic_auth):
         console.print(f"[green]github-app[/] -> {s.push_github_app()}")
     if basic_auth:
         console.print(f"[green]basic-auth[/] -> {s.push_basic_auth(*basic_auth)}")
-    if not (anthropic or github_app or basic_auth):
-        raise click.UsageError("nothing to push; pass --anthropic, --github-app and/or --basic-auth")
+    if github_human:
+        tok = os.environ.get("GITHUB_HUMAN_TOKEN") or click.prompt("GitHub fine-grained PAT", hide_input=True)
+        login = os.environ.get("GITHUB_HUMAN_LOGIN") or click.prompt("GitHub login")
+        console.print(f"[green]github-human[/] -> {s.push_github_human(tok, login)}")
+    if not (anthropic or github_app or basic_auth or github_human):
+        raise click.UsageError("nothing to push; pass --anthropic, --github-app, --basic-auth and/or --github-human")
 
 
 @secrets.command("status")

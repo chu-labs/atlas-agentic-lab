@@ -32,6 +32,8 @@ locals {
     { name = "BASIC_AUTH_USER", valueFrom = "${aws_secretsmanager_secret.s["basic-auth"].arn}:username::" },
     { name = "BASIC_AUTH_PASS", valueFrom = "${aws_secretsmanager_secret.s["basic-auth"].arn}:password::" },
     { name = "ANTHROPIC_API_KEY", valueFrom = "${aws_secretsmanager_secret.s["anthropic-api-key"].arn}:api_key::" },
+    { name = "GITHUB_HUMAN_TOKEN", valueFrom = "${aws_secretsmanager_secret.s["github-human"].arn}:token::" },
+    { name = "GITHUB_HUMAN_LOGIN", valueFrom = "${aws_secretsmanager_secret.s["github-human"].arn}:login::" },
   ]
 }
 

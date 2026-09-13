@@ -5,6 +5,7 @@ locals {
     anthropic-api-key = jsonencode({ api_key = "REPLACE_ME" })
     github-app        = jsonencode({ id = "0", slug = "chu-atlas-agents", installation_id = "0", pem = "REPLACE_ME" })
     basic-auth        = jsonencode({ username = "REPLACE_ME", password = "REPLACE_ME" })
+    github-human      = jsonencode({ token = "REPLACE_ME", login = "REPLACE_ME" })
   }
 }
 

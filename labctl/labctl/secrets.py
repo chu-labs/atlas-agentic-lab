@@ -39,3 +39,7 @@ def status() -> dict[str, bool]:
         val = sm.get_secret_value(SecretId=arn)["SecretString"]
         out[name] = "REPLACE_ME" not in val
     return out
+
+
+def push_github_human(token: str, login: str) -> str:
+    return put("github-human", {"token": token, "login": login})
