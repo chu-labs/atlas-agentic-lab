@@ -56,7 +56,8 @@ class Agent(base.Agent):
                           smoke={"ok": True, "checks": checks}, signature_seen_after_deploy=0, sha=sha)
         if key and self.guard("can_close_tickets", f"close {key}", key):
             self.board.comment(key, "Deployed to production and verified:\n" + "\n".join(f"- {c['name']}: {c['detail']}" for c in checks) +
-                               f"\n- error signature `{signature}` not seen since deploy\n\nClosing.")
+                               (f"\n- error signature `{signature}` not seen since deploy" if signature else "\n- human-reported ticket: no production error signature to check; reproduction endpoint healthy")
+                               + "\n\nClosing.")
             self.board.move(key, "Done")
             self.emitter.emit("ticket.closed", key, f"Closed {key}: fix deployed and verified in production", sha=sha, pr={"number": pr["number"], "url": pr["html_url"]} if pr else {})
         self.emitter.status("idle", f"{key or sha[:12]} verified and closed." if key else "Deploy verified.", ticket=key)
