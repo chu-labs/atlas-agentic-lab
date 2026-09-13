@@ -67,6 +67,18 @@ signatures of a cluster; the dashboard folds them so related endpoints never app
 Resilience learned live: GitHub's review endpoint can 500 on long bodies, so Sentinel falls back to a PR comment,
 and dead-lettered messages can be redriven with `aws sqs start-message-move-task`.
 
+## Night (13 Sep 2026): Mission Control v4
+
+Owner: an operations view for live production issues (infra, performance, real bugs from telemetry) and a dev
+view for assigned tasks and what the dev agents are doing. Delivered: tabs Operations / Engineering / Board /
+CI/CD / DORA. Operations shows signal by kind (crash, business rule, performance, infrastructure), a live cluster
+table with observing/ticketed status, service health from ECS and the ALB via CloudWatch, incidents, and the ops
+agents; Mission Control's backend now polls health and emits `infra.alert` (source atlas.ops) so Watchtower has an
+infrastructure signal. `labctl chaos kill-task|outage` produce infrastructure incidents on demand. The dashboard
+acts on the board as the `maroun` handle (the GitHub login is not a board user). Conductor smoke-quotes an active
+policy so its own check is not an error source. The Board-driven path was proven live: the owner assigned a
+human-filed ticket to Forge from the Board and approved the PR at the gate themselves.
+
 ## Extras status
 
 Built: the agent that says no (40 s live), cost per ticket, audit trail (stage drawer), parallel fleet (`labctl demo storm` / `labctl scale forge 3`), DORA panel (v3), CI/CD view (v3). Available but not rehearsed: the agent that gets caught (label a ticket `review:strict`). Not built: spec-to-PR as a dedicated flow (the Board tab's New-ticket form assigned to Forge is the manual version), a deliberate guardrail trip (the `guard()` mechanism exists; no trigger command).
