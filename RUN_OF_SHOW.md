@@ -36,12 +36,19 @@ autonomous system can do is recognise a decision that is not its to make."
 
 Before the talk: `labctl inject float-premium --workbench` (puts the defect on main with no deploy and
 files a human ticket, assigned to you, so the fleet leaves it alone), then `labctl workbench --ticket ATLAS-<n>`.
-Switch to the tmux window. In the main
-pane type: *Assemble a team for ATLAS-<n>: analyst, tester, builder, then reviewer. Converge and open
-one PR.* Four panes appear with four branches. Talk over them: the tester never sees the builder's code.
-When they finish, the main session merges the branches; if two agents solved it differently, that
-reconciliation is the interesting part. The PR lands at the same gate. Say: "Same system, same gate.
-The only thing that moved is where the human sits."
+Switch to the tmux window.
+
+What happened in rehearsal on 13 Sep, and what to say while it happens again:
+
+| Clock | What happens | What you say |
+|---|---|---|
+| 0:00 | In the main pane: *"Assemble a team for ATLAS-<n>: an analyst, a tester and a builder in parallel, then a reviewer on the builder's branch. Converge, run the suite, open one PR."* | "This is the other mode. I am at the keyboard. Watch the right-hand side." |
+| 0:10 | Three panes appear, three branches, three worktrees. | "Three separate processes, three separate copies of the repo. The tester cannot see the builder's code. That is deliberate: tests written against the spec, not against the implementation." |
+| 1:30 | All three finish (rehearsal: 53–87 s, about $1 total). Reviewer pane appears on the builder's branch. | "Now a fourth agent reviews the builder's work, and only the builder's work." |
+| 3:20 | Reviewer verdict: **request changes**, "no test covers more than 13 lots". | "It is right. The builder wrote no tests. But look at the tester's pane." |
+| 3:30 | Main session converges the four branches. **The suite breaks at collection**: the tester's tests import a constant the builder deleted. | *This is the moment.* "Two agents solved the same problem from different ends and their work does not fit together. That is normal engineering. The interesting part is not that they disagree, it is who reconciles them." |
+| 4:30 | Main session fixes the import, 48 tests green, opens PR #<n> as the agents' identity. | "The reviewer asked for exactly the tests the tester had already written. Reconciled, green, one PR." |
+| 5:00 | Sentinel reviews it; Mission Control shows it at **the same human gate** as the autonomous run. | "Same gate. Same button. The only thing that moved is where the human sat." |
 
 ## If anything fails on stage
 
