@@ -51,8 +51,25 @@ class Board:
     def update(self, key: str, **fields) -> dict:
         return self._j(self.http.patch(f"/api/issues/{key}", json=fields))
 
+    FLOW = ["Backlog", "Triage", "In Progress", "In Review", "Done"]
+
     def transition(self, key: str, status: str) -> dict:
         return self._j(self.http.post(f"/api/issues/{key}/transition", json={"status": status}))
+
+    def move(self, key: str, target: str) -> dict:
+        """Move a ticket to `target`, stepping forward through the flow one status at a time.
+
+        Backward moves (send-back, reopen, any->Backlog) are single transitions the board allows.
+        """
+        issue = self.get(key)
+        current = issue.get("status")
+        if current == target:
+            return issue
+        if target in self.FLOW and current in self.FLOW and self.FLOW.index(target) > self.FLOW.index(current):
+            for status in self.FLOW[self.FLOW.index(current) + 1 : self.FLOW.index(target) + 1]:
+                issue = self.transition(key, status)
+            return issue
+        return self.transition(key, target)
 
     def comment(self, key: str, body: str) -> dict:
         return self._j(self.http.post(f"/api/issues/{key}/comments", json={"body": body}))

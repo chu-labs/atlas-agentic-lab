@@ -113,7 +113,7 @@ class Agent(base.Agent):
             return
         t0 = time.time()
         self.current_ticket = key
-        self.board.transition(key, "In Progress")
+        self.board.move(key, "In Progress")
         self.think(key, f"Picked up {key} from the queue: \"{issue['title']}\". Cloning atlas-platform and reading CLAUDE.md before I touch anything.")
 
         branch = f"fix/{key}-{slug(issue['title'])}"
@@ -177,7 +177,7 @@ class Agent(base.Agent):
             f"**Fix:** {summary.get('fix', '?')}\n\n**Test:** {summary.get('test', '?')}\n\n**Not changed:** {summary.get('not_changed', '-')}\n\n"
             f"I cannot merge this; it needs Sentinel's review and a human approval.",
         )
-        self.board.transition(key, "In Review")
+        self.board.move(key, "In Review")
         elapsed = time.time() - t0
         self.emitter.emit(
             "pr.opened", key, f"Opened PR #{pr['number']} after {elapsed / 60:.1f} min: failing test first, then the fix",
@@ -196,7 +196,7 @@ class Agent(base.Agent):
             return
         s = self.sessions[key]
         wd, env = Path(s["workdir"]), self._test_env()
-        self.board.transition(key, "In Progress")
+        self.board.move(key, "In Progress")
         self.think(key, "Sentinel requested changes. Reading the review and reworking on the same branch.")
         run = claude_code.run(
             REWORK.format(review=review), wd, model=self.me.model or self.cfg.model, env=env, resume=s["session_id"],
@@ -213,7 +213,7 @@ class Agent(base.Agent):
         self._push(wd, s["branch"])
         self.gh.comment(s["pr"], "Addressed Sentinel's review:\n\n" + "\n".join(f"- {a}" for a in out.get("addressed", [])) + ("\n\nPushed back on:\n" + "\n".join(f"- {a}" for a in out.get("pushed_back", [])) if out.get("pushed_back") else ""))
         self.board.comment(key, "Addressed the review and pushed. " + report)
-        self.board.transition(key, "In Review")
+        self.board.move(key, "In Review")
         prd = self.gh.pr(s["pr"])
         self.emitter.emit("pr.updated", key, f"Pushed rework to PR #{s['pr']}", pr={"number": s["pr"], "url": prd["html_url"], "branch": s["branch"], "title": prd["title"], "head_sha": prd["head"]["sha"]})
         self.emitter.status("waiting_on_review", "Rework pushed. Waiting for Sentinel again.", ticket=key)

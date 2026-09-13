@@ -65,7 +65,7 @@ def cluster_key(detail: dict) -> str:
         return f"slow:{detail.get('endpoint')}"
     frames = _FRAME.findall(detail.get("stack") or "")
     if frames:
-        path, line, func = frames[-1]
+        path, _line, func = frames[-1]
         return f"{detail.get('error_type')}@{path}:{func}"
     return detail.get("signature") or f"{detail.get('endpoint')}:{detail.get('error_type')}"
 

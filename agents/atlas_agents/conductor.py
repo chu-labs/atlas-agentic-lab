@@ -57,7 +57,7 @@ class Agent(base.Agent):
         if key and self.guard("can_close_tickets", f"close {key}", key):
             self.board.comment(key, "Deployed to production and verified:\n" + "\n".join(f"- {c['name']}: {c['detail']}" for c in checks) +
                                f"\n- error signature `{signature}` not seen since deploy\n\nClosing.")
-            self.board.transition(key, "Done")
+            self.board.move(key, "Done")
             self.emitter.emit("ticket.closed", key, f"Closed {key}: fix deployed and verified in production", sha=sha, pr={"number": pr["number"], "url": pr["html_url"]} if pr else {})
         self.emitter.status("idle", f"{key or sha[:12]} verified and closed." if key else "Deploy verified.", ticket=key)
 
@@ -128,6 +128,6 @@ class Agent(base.Agent):
         self.emitter.emit("verify.failed", key, f"Verification failed: {why[:140]}", smoke={"ok": False})
         if key and self.guard("can_reopen_tickets", f"reopen {key}", key):
             self.board.comment(key, f"**Verification failed after deploy.** {why}\n\nReopening and escalating to a human; a rollback may be needed.")
-            self.board.transition(key, "In Progress")
+            self.board.move(key, "In Progress")
             self.board.escalate(key, "maroun", f"Post-deploy verification failed: {why}")
         self.emitter.status("blocked", f"Verification failed for {key or 'deploy'}: {why[:100]}", ticket=key)

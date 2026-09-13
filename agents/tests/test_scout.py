@@ -50,3 +50,18 @@ def test_cluster_key_groups_same_frame_across_endpoints():
     assert a == b == "ZeroDivisionError@atlas/domain/risk.py:claims_pillar"
     assert cluster_key({"kind": "business_rule", "message": "quote.expired_policy: ATL-1 expired"}) == "rule:quote.expired_policy"
     assert cluster_key({"kind": "performance", "endpoint": "/api/policies"}) == "slow:/api/policies"
+
+
+def test_board_move_steps_forward(monkeypatch):
+    from atlas_agents.board import Board
+
+    b = Board.__new__(Board)
+    calls = []
+    monkeypatch.setattr(b, "get", lambda key: {"status": "Backlog"})
+    monkeypatch.setattr(b, "transition", lambda key, status: calls.append(status) or {"status": status})
+    b.move("ATLAS-1", "In Progress")
+    assert calls == ["Triage", "In Progress"]
+    calls.clear()
+    monkeypatch.setattr(b, "get", lambda key: {"status": "In Review"})
+    b.move("ATLAS-1", "In Progress")
+    assert calls == ["In Progress"]

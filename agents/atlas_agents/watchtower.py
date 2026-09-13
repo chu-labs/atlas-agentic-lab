@@ -71,7 +71,7 @@ class Agent(base.Agent):
             log.exception("postmortem llm failed")
             pm = "Postmortem draft unavailable.\n\n" + "\n".join(self.timeline)
         self.board.comment(key, "## Draft postmortem\n\n" + pm)
-        self.board.transition(key, "In Review")
+        self.board.move(key, "In Review")
         self.emitter.emit("incident.resolved", key, f"Resolved {key}; postmortem drafted for human review")
         self.emitter.status("idle", f"{key} resolved; postmortem awaiting a human.", ticket=key)
         self.incident = None
