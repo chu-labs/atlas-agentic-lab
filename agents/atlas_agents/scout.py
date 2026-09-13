@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 
@@ -46,6 +47,29 @@ def sig_label(signature: str) -> str:
     return "sig:" + hashlib.sha1(signature.encode()).hexdigest()[:8]
 
 
+_FRAME = re.compile(r'File "[^"]*?/(atlas/[^"]+)", line (\d+), in (\w+)')
+
+
+def cluster_key(detail: dict) -> str:
+    """One root cause, one cluster.
+
+    Crashes cluster on error type plus the innermost application frame that raised, so the same
+    bug reached from two endpoints is one ticket. Business-rule violations cluster on the rule.
+    Performance events cluster on the endpoint.
+    """
+    kind = detail.get("kind", "crash")
+    if kind == "business_rule":
+        rule = (detail.get("message") or "").split(":", 1)[0].strip()
+        return f"rule:{rule or detail.get('endpoint')}"
+    if kind == "performance":
+        return f"slow:{detail.get('endpoint')}"
+    frames = _FRAME.findall(detail.get("stack") or "")
+    if frames:
+        path, line, func = frames[-1]
+        return f"{detail.get('error_type')}@{path}:{func}"
+    return detail.get("signature") or f"{detail.get('endpoint')}:{detail.get('error_type')}"
+
+
 class Agent(base.Agent):
     queue_env = "queue_url_prod_errors"
 
@@ -60,7 +84,8 @@ class Agent(base.Agent):
         if "signature" not in detail:
             return
         detail["_received"] = time.time()
-        c = self.clusters.setdefault(detail["signature"], Cluster(detail["signature"]))
+        key = cluster_key(detail)
+        c = self.clusters.setdefault(key, Cluster(key))
         c.events.append(detail)
         c.events = c.events[-200:]
         self._track_rate()
@@ -120,8 +145,9 @@ class Agent(base.Agent):
             f"({sample.get('error_type')}) in the last {WINDOW // 60} minutes. No open ticket matches this signature, so I am assessing it.",
         )
         evidence = {
-            "signature": c.signature,
+            "cluster": c.signature,
             "kind": kind,
+            "endpoints_seen": sorted({e.get("endpoint") for e in c.recent if e.get("endpoint")}),
             "occurrences_recent": n,
             "occurrences_total": len(c.events),
             "customer_impact_recent": c.impact,
@@ -159,13 +185,16 @@ class Agent(base.Agent):
             }
         issue = self.board.create(
             type="Bug",
+            status="Triage",
             title=out["title"],
             description=out["description"],
             priority=out.get("priority", "High"),
             labels=["production", kind, sig_label(c.signature)],
             assignee="forge",
             source={
-                "signature": c.signature,
+                "signature": sample.get("signature"),
+                "cluster": c.signature,
+                "endpoints": sorted({e.get("endpoint") for e in c.recent if e.get("endpoint")}),
                 "first_seen": sample.get("ts"),
                 "occurrences": len(c.events),
                 "customer_impact": c.impact,

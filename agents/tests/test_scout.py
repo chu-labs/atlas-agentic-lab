@@ -39,3 +39,14 @@ def test_forge_slug():
     from atlas_agents.forge import slug
 
     assert slug("Renewal window drops policies due exactly 30 days out") == "renewal-window-drops-policies-due-exactl"
+
+
+def test_cluster_key_groups_same_frame_across_endpoints():
+    from atlas_agents.scout import cluster_key
+
+    stack = 'File "/app/atlas/api/routes.py", line 133, in building_risk\n  File "/app/atlas/domain/risk.py", line 27, in claims_pillar\nZeroDivisionError'
+    a = cluster_key({"kind": "crash", "error_type": "ZeroDivisionError", "endpoint": "/api/buildings/{id}/risk", "stack": stack})
+    b = cluster_key({"kind": "crash", "error_type": "ZeroDivisionError", "endpoint": "/api/policies/{n}/quote", "stack": stack})
+    assert a == b == "ZeroDivisionError@atlas/domain/risk.py:claims_pillar"
+    assert cluster_key({"kind": "business_rule", "message": "quote.expired_policy: ATL-1 expired"}) == "rule:quote.expired_policy"
+    assert cluster_key({"kind": "performance", "endpoint": "/api/policies"}) == "slow:/api/policies"
