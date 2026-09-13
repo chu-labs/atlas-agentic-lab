@@ -54,9 +54,22 @@ exactly what was chosen and why.
 - Workbench: `spawn_teammate(base=)` for a reviewer on the builder's branch, `open_pr` pushes and opens as the App so the human approval counts, `labctl inject <id> --workbench` files a human ticket without deploying.
 - `labctl baseline set` refuses to record a defect build; `labctl record video` renders MP4 through a local dashboard and headless Chromium.
 
+## Evening (13 Sep 2026): Mission Control v3 and the scenario runner
+
+Owner feedback: more detailed and operational, proper avatars, a Board tab to assign agents, a pipeline that
+always reflects the observed issue, a script to kick off errors, CI/CD and DORA. Delivered: DiceBear avatars
+generated at build time; tabs Mission Control / Board / CI/CD / DORA; an OBSERVING row that lights Error and Triage
+before a ticket exists and becomes the ticket row in place; a board proxy with assign menus and a New-ticket form;
+`/api/cicd` from GitHub Actions with an approve-deployment button; `/api/dora` from the event store with the owner's
+traditional baselines (~14 days for a small bug) and the DORA elite band; `labctl demo run|watch|storm` streaming
+events to the terminal and pausing at the gate; multi-defect inject. Scout emits `incident.attached` and lists all
+signatures of a cluster; the dashboard folds them so related endpoints never appear as untracked.
+Resilience learned live: GitHub's review endpoint can 500 on long bodies, so Sentinel falls back to a PR comment,
+and dead-lettered messages can be redriven with `aws sqs start-message-move-task`.
+
 ## Extras status
 
-Built: the agent that says no (40 s live), cost per ticket, audit trail (stage drawer), parallel fleet (`labctl scale forge 3`). Available but not rehearsed: the agent that gets caught (label a ticket `review:strict`). Not built: spec-to-PR, DORA panel, a deliberate guardrail trip (the `guard()` mechanism exists; no trigger command).
+Built: the agent that says no (40 s live), cost per ticket, audit trail (stage drawer), parallel fleet (`labctl demo storm` / `labctl scale forge 3`), DORA panel (v3), CI/CD view (v3). Available but not rehearsed: the agent that gets caught (label a ticket `review:strict`). Not built: spec-to-PR as a dedicated flow (the Board tab's New-ticket form assigned to Forge is the manual version), a deliberate guardrail trip (the `guard()` mechanism exists; no trigger command).
 
 ## Open items
 
