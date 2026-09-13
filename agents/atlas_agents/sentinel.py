@@ -118,7 +118,12 @@ class Agent(base.Agent):
 
         body = self._body(out, blocking, findings, request_changes, ci)
         event = "REQUEST_CHANGES" if request_changes else "COMMENT"
-        self.gh.review(number, event, body)
+        try:
+            self.gh.review(number, event, body)
+        except Exception:  # noqa: BLE001
+            # GitHub occasionally 500s on the reviews endpoint; the review must still land.
+            log.exception("review endpoint failed; posting as a PR comment instead")
+            self.gh.comment(number, body)
         verdict = "requested changes" if request_changes else "commented; no blocking concerns"
         self.board.comment(key, f"Reviewed [PR #{number}]({pr['html_url']}) and **{verdict}**.\n\n{out.get('summary', '')}" + (
             "\n\nBlocking:\n" + "\n".join(f"- {b}" for b in blocking + [c.get("ask") or c.get("what") for c in model_blocking]) if request_changes else ""
