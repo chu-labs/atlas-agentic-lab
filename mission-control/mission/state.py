@@ -46,6 +46,38 @@ def error_signature(d: dict) -> str | None:
     return None
 
 
+FRAME_RE = re.compile(r'File "[^"]*?/(atlas/[^"]+)", line \d+, in (\w+)')
+
+
+def root_frame(d: dict) -> str | None:
+    """The innermost `atlas/…` frame of a stack: Scout clusters by this, so we can too."""
+    stack = d.get("stack")
+    if not isinstance(stack, str) or not stack:
+        return None
+    frames = FRAME_RE.findall(stack)
+    if not frames:
+        return None
+    path, func = frames[-1]
+    return f"{path}:{func}"
+
+
+def root_key(d: dict) -> tuple[str, str] | None:
+    """(error_type, innermost atlas frame) — the heuristic identity of an error without a ticket event."""
+    frame = root_frame(d)
+    et = d.get("error_type")
+    return (str(et), frame) if frame and et else None
+
+
+def incident_signatures(d: dict) -> list[str]:
+    """Every signature an incident.opened / incident.attached names (Scout clusters by root cause)."""
+    out: list[str] = []
+    inc = d.get("incident") or {}
+    for v in [inc.get("signature"), d.get("signature"), *(inc.get("signatures") or []), *(d.get("signatures") or [])]:
+        if v and str(v) not in out:
+            out.append(str(v))
+    return out
+
+
 def incident_signature(d: dict) -> str | None:
     issue = d.get("issue") or {}
     source = issue.get("source") or {}
@@ -141,11 +173,14 @@ class State:
                 "pr_ts": None,
                 "closed_ts": None,
                 "signature": signature,
+                "signatures": set([signature] if signature else []),
+                "roots": set(),
             }
             self.rows[ticket] = row
             self._attach_untracked(row, signature)
-        elif signature and not row.get("signature"):
-            row["signature"] = signature
+        elif signature and signature not in row["signatures"]:
+            row["signature"] = row.get("signature") or signature
+            row["signatures"].add(signature)
             self._attach_untracked(row, signature)
         if title and not row["title"]:
             row["title"] = title
@@ -158,18 +193,41 @@ class State:
     def _row_signature(row: dict) -> str | None:
         return row.get("signature") or (row.get("error") or {}).get("signature")
 
+    @staticmethod
+    def _owns(row: dict, sig: str | None, root: tuple[str, str] | None = None) -> bool:
+        """Does this ticket own the error: by any of its signatures, or by root cause (type + innermost frame)?"""
+        if sig and (sig in row["signatures"] or sig == row.get("signature")):
+            return True
+        return bool(root and root in row["roots"])
+
+    def _owner_of(self, sig: str | None, root: tuple[str, str] | None = None) -> dict | None:
+        return next((r for r in self._open_ticket_rows() if self._owns(r, sig, root)), None)
+
+    def adopt_signature(self, row: dict, sig: str | None) -> None:
+        if sig and sig not in row["signatures"]:
+            row["signatures"].add(sig)
+            row["signature"] = row.get("signature") or sig
+
     def _attach_untracked(self, row: dict, signature: str | None) -> None:
         """Fold the untracked errors with this signature into the ticket row: count, first seen, triage start.
 
         With no signature to match on, or when nothing matched and this is the only open ticket,
         every untracked bucket is taken: the errors that started all this belong to this ticket.
         """
-        keys = [k for k, b in self.untracked.items() if signature is None or b["signature"] == signature]
+        keys = [
+            k for k, b in self.untracked.items()
+            if signature is None or b["signature"] == signature or b["signature"] in row["signatures"]
+            or (b.get("root") and b["root"] in row["roots"])
+        ]
         if not keys and len(self._open_ticket_rows()) == 1:
             keys = list(self.untracked)
         if not keys:
             return
         taken = [self.untracked.pop(k) for k in keys]
+        for b in taken:
+            self.adopt_signature(row, b["signature"])
+            if b.get("root"):
+                row["roots"].add(b["root"])
         first = min(taken, key=lambda b: b["first_ts"])
         count = sum(b["count"] for b in taken) + (row.get("error") or {}).get("count", 0)
         row["error"] = {
@@ -194,12 +252,16 @@ class State:
             bucket = self.untracked.get(key)
             if not bucket:
                 continue
-            owner = next((r for r in self._open_ticket_rows() if self._row_signature(r) == bucket["signature"]), None)
+            owner = self._owner_of(bucket["signature"], bucket.get("root"))
             if owner is not None:
                 self._attach_untracked(owner, bucket["signature"])
 
     def _count_error(self, row: dict, d: dict, ts: datetime, sig: str | None) -> None:
-        """One more error.raised on a ticket that already owns this signature."""
+        """One more error.raised on a ticket that already owns this signature (or its root cause)."""
+        self.adopt_signature(row, sig)
+        root = root_key(d)
+        if root:
+            row["roots"].add(root)
         if not row.get("error"):
             row["error"] = {"signature": sig, "endpoint": d.get("endpoint"), "error_type": d.get("error_type"),
                             "message": d.get("message"), "count": 0, "first_seen": ts}
@@ -270,19 +332,21 @@ class State:
             # --- pipeline ------------------------------------------------
             if kind == "error.raised":
                 sig = error_signature(d)
+                root = root_key(d)
                 self._record_error(d, ts, sig)
-                row = next((r for r in self._open_ticket_rows() if self._row_signature(r) == sig), None)
+                row = self._owner_of(sig, root)
                 if row is not None:
                     self._count_error(row, d, ts, sig)
                 else:
                     bucket = self.untracked.get(sig or "")
                     if bucket is None:
                         self.untracked[sig or ""] = bucket = {
-                            "signature": sig, "count": 0, "first_ts": ts, "last_ts": ts,
+                            "signature": sig, "root": root, "count": 0, "first_ts": ts, "last_ts": ts,
                             "message": d.get("message"), "endpoint": d.get("endpoint"), "error_type": d.get("error_type"),
                             "status_code": d.get("status_code"), "method": d.get("method"),
                         }
                     bucket["count"] += 1
+                    bucket["root"] = bucket.get("root") or root
                     bucket["first_ts"] = min(bucket["first_ts"], ts)
                     if ts >= bucket["last_ts"]:
                         bucket.update(last_ts=ts, message=d.get("message") or bucket["message"])
@@ -293,10 +357,21 @@ class State:
                 self._absorb_orphans()
             elif kind in {"incident.opened", "issue.created"} and ticket:
                 issue = d.get("issue") or {}
-                row = self._row(ticket, ts, issue.get("title"), incident_signature(d))
+                sigs = incident_signatures(d)
+                row = self._row(ticket, ts, issue.get("title"), sigs[0] if sigs else None)
+                for extra_sig in sigs[1:]:
+                    self.adopt_signature(row, extra_sig)
+                    self._attach_untracked(row, extra_sig)
                 if src == "atlas.scout":
                     row["stages"].setdefault("triage", ts)
                 self._enter(row, "ticket", ts)
+                row["updated_ts"] = max(row["updated_ts"], ts)
+                self._absorb_orphans()
+            elif kind == "incident.attached" and ticket:
+                row = self._row(ticket, ts)
+                for extra_sig in incident_signatures(d):
+                    self.adopt_signature(row, extra_sig)
+                    self._attach_untracked(row, extra_sig)
                 row["updated_ts"] = max(row["updated_ts"], ts)
                 self._absorb_orphans()
             elif ticket:
@@ -572,6 +647,7 @@ class State:
                     "last_seen": iso(dominant["last_ts"]),
                 },
                 "signature": dominant["signature"],
+                "signatures": sorted(b["signature"] for b in self.untracked.values() if b["signature"]),
                 "first_ts": iso(first),
                 "updated_ts": iso(dominant["last_ts"]),
                 "closed_ts": None,
@@ -608,6 +684,7 @@ class State:
                         "pr": r["pr"],
                         "error": {**err, "first_seen": iso(err.get("first_seen")), "last_seen": iso(err.get("last_seen"))} if err else None,
                         "signature": self._row_signature(r),
+                        "signatures": sorted(r.get("signatures") or []),
                         "first_ts": iso(r["first_ts"]),
                         "updated_ts": iso(r["updated_ts"]),
                         "closed_ts": iso(r["closed_ts"]),

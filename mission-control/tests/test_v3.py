@@ -149,3 +149,79 @@ def test_cicd_shapes_runs_and_degrades(client, monkeypatch):
 def test_system_degrades_locally(client):
     d = client.get("/api/system").json()
     assert d["region"] and [s["name"] for s in d["services"]] == ["mission-control", "atlas-board", "atlas-platform"]
+
+
+STACK_RISK = """Traceback (most recent call last):
+  File "/app/atlas/api/routes.py", line 210, in building_risk
+    return rating.risk_per_lot(building)
+  File "/app/atlas/domain/rating.py", line 88, in risk_per_lot
+    return total / lots
+ZeroDivisionError: division by zero
+"""
+STACK_QUOTE = STACK_RISK.replace("line 210, in building_risk", "line 121, in quote").replace("risk_per_lot(building)", "risk_per_lot(b)")
+
+
+def _zerr(sec: float, endpoint: str, stack: str, sig: str | None = None) -> dict:
+    return ev("atlas.platform", "error.raised", sec, None, None, "500", kind="crash", signature=sig or f"{endpoint}:ZeroDivisionError",
+              endpoint=endpoint, method="GET", status_code=500, error_type="ZeroDivisionError", message="division by zero", stack=stack)
+
+
+def _tickets(st: State, now):
+    return [r for r in st.snapshot(now=now)["pipeline"] if not r["observing"]]
+
+
+def _observing(st: State, now):
+    return [r for r in st.snapshot(now=now)["pipeline"] if r["observing"]]
+
+
+def test_incident_signatures_and_incident_attached_belong_to_the_ticket():
+    st = State()
+    now = T0 + timedelta(minutes=5)
+    risk = "/api/buildings/{id}/risk:ZeroDivisionError"
+    quote = "/api/policies/{n}/quote:ZeroDivisionError"
+    st.apply(normalise(_zerr(0, "/api/buildings/{id}/risk", STACK_RISK, risk)))
+    st.apply(normalise(_zerr(1, "/api/policies/{n}/quote", STACK_QUOTE, quote)))
+    assert len(_observing(st, now)) == 1 and _observing(st, now)[0]["error"]["count"] == 2
+    # incident.opened names both signatures: both pending buckets fold in, nothing left observing
+    st.apply(normalise(ev("atlas.scout", "incident.opened", 10, agent("scout"), "ATLAS-37", "Opened ATLAS-37",
+                          incident={"signature": risk, "signatures": [risk, quote], "count": 2, "cluster": "atlas/domain/rating.py:risk_per_lot"},
+                          issue={"key": "ATLAS-37", "title": "ZeroDivisionError when lots=0"})))
+    rows = _tickets(st, now)
+    assert len(rows) == 1 and rows[0]["error"]["count"] == 2 and rows[0]["signatures"] == sorted([quote, risk])
+    assert _observing(st, now) == []
+    # a third signature joins the cluster later: incident.attached, then its errors count on the ticket
+    renew = "/api/renewals/{n}/requote:ZeroDivisionError"
+    st.apply(normalise(_zerr(20, "/api/renewals/{n}/requote", "no atlas frames here", renew)))
+    assert len(_observing(st, now)) == 1  # unknown stack, unknown signature: genuinely new until Scout says otherwise
+    st.apply(normalise(ev("atlas.scout", "incident.attached", 21, agent("scout"), "ATLAS-37", "Attached a signature",
+                          signature=renew, cluster="atlas/domain/rating.py:risk_per_lot")))
+    assert _observing(st, now) == [] and _tickets(st, now)[0]["error"]["count"] == 3
+    st.apply(normalise(_zerr(22, "/api/renewals/{n}/requote", "no atlas frames here", renew)))
+    rows = _tickets(st, now)
+    assert rows[0]["error"]["count"] == 4 and renew in rows[0]["signatures"] and _observing(st, now) == []
+
+
+def test_root_cause_heuristic_attaches_without_scout_events():
+    st = State()
+    now = T0 + timedelta(minutes=5)
+    risk = "/api/buildings/{id}/risk:ZeroDivisionError"
+    st.apply(normalise(_zerr(0, "/api/buildings/{id}/risk", STACK_RISK, risk)))
+    st.apply(normalise(ev("atlas.scout", "incident.opened", 5, agent("scout"), "ATLAS-37", "Opened",
+                          incident={"signature": risk, "count": 1}, issue={"key": "ATLAS-37", "title": "ZeroDivisionError"})))
+    # a different endpoint, same error type, same innermost atlas frame -> the ticket's error, not an OBSERVING row
+    st.apply(normalise(_zerr(60, "/api/policies/{n}/quote", STACK_QUOTE)))
+    rows = _tickets(st, now)
+    assert _observing(st, now) == [] and rows[0]["error"]["count"] == 2
+    assert "/api/policies/{n}/quote:ZeroDivisionError" in rows[0]["signatures"]
+    # same frame but a different error type is not the same root cause
+    other = STACK_RISK.replace("ZeroDivisionError: division by zero", "KeyError: 'lots'")
+    st.apply(normalise(ev("atlas.platform", "error.raised", 61, None, None, "500", kind="crash", signature="/api/buildings/{id}/risk:KeyError",
+                          endpoint="/api/buildings/{id}/risk", error_type="KeyError", message="'lots'", stack=other)))
+    assert len(_observing(st, now)) == 1 and _tickets(st, now)[0]["error"]["count"] == 2
+    # ...and a pending bucket that arrived BEFORE the ticket, with the matching root, is folded in when the ticket appears
+    st2 = State()
+    st2.apply(normalise(_zerr(0, "/api/policies/{n}/quote", STACK_QUOTE)))
+    st2.apply(normalise(_zerr(1, "/api/buildings/{id}/risk", STACK_RISK, risk)))
+    st2.apply(normalise(ev("atlas.scout", "incident.opened", 5, agent("scout"), "ATLAS-38", "Opened",
+                           incident={"signature": risk, "count": 1}, issue={"key": "ATLAS-38", "title": "x"})))
+    assert _observing(st2, now) == [] and _tickets(st2, now)[0]["error"]["count"] == 2

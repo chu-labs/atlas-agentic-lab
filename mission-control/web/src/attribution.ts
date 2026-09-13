@@ -18,7 +18,10 @@ const TICKET_KEY = /^[A-Z][A-Z0-9]*-\d+$/;
 /** Does this event belong to the ticket row? Errors match by signature; Scout's triage-time events match by window. */
 export function belongsTo(e: MissionEvent, row: PipelineRow): boolean {
   if (e.ticket === row.ticket) return true;
-  if (e.detail_type === "error.raised") return !!row.signature && errorSignature(e) === row.signature;
+  if (e.detail_type === "error.raised") {
+    const sig = errorSignature(e);
+    return (!!row.signature && sig === row.signature) || (row.signatures ?? []).includes(sig);
+  }
   if (e.ticket && !TICKET_KEY.test(e.ticket)) {
     // a pseudo-ticket such as "triage": ours if it sits between the first error and the ticket being opened
     const start = row.stages.error ?? row.stages.triage;

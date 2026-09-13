@@ -77,6 +77,7 @@ export interface PipelineRow {
     last_seen?: string | null;
   } | null;
   signature: string | null;
+  signatures?: string[];
   first_ts: string;
   updated_ts: string;
   closed_ts: string | null;
