@@ -6,6 +6,7 @@ import logging
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 
+from .. import board_proxy, cicd, dora, system
 from ..bus import envelope, human_actor, publish
 from ..db import repo
 from ..db.pool import conn
@@ -13,7 +14,16 @@ from ..github_human import HumanGitHub
 from ..hub import hub
 from ..settings import settings
 from .auth import WS_TOKEN_TTL, make_ws_token
-from .schemas import GateApproveIn, GateRejectIn, InjectIn, RecordingIn, ReplayIn
+from .schemas import (
+    AssignIn,
+    BoardIssueIn,
+    GateApproveIn,
+    GateRejectIn,
+    InjectIn,
+    RecordingIn,
+    ReplayIn,
+    TransitionIn,
+)
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
@@ -163,3 +173,65 @@ def admin_reset():
 def admin_inject(body: InjectIn):
     out = [hub().ingest(raw) for raw in body.as_events()]
     return {"ok": True, "ingested": len(out), "last_event_id": out[-1]["id"] if out else None}
+
+
+# ---------------------------------------------------------------- board (proxied to atlas-board as the human)
+
+
+@router.get("/board/issues")
+def board_issues(limit: int = Query(200, ge=1, le=1000)):
+    return board_proxy.list_issues(limit)
+
+
+@router.get("/board/users")
+def board_users():
+    return board_proxy.list_users()
+
+
+@router.get("/board/issues/{key}")
+def board_issue(key: str):
+    return board_proxy.get_issue(key)
+
+
+@router.post("/board/issues", status_code=201)
+def board_create(body: BoardIssueIn):
+    return board_proxy.create_issue(body.model_dump(exclude_none=True))
+
+
+@router.post("/board/issues/{key}/assign")
+def board_assign(key: str, body: AssignIn):
+    return board_proxy.assign(key, body.handle)
+
+
+@router.post("/board/issues/{key}/transition")
+def board_transition(key: str, body: TransitionIn):
+    return board_proxy.transition(key, body.status, body.body)
+
+
+# ---------------------------------------------------------------- CI/CD, DORA, system
+
+
+@router.get("/cicd")
+def get_cicd(refresh: bool = False):
+    return cicd.fetch(force=refresh)
+
+
+@router.post("/cicd/runs/{run_id}/approve")
+def approve_run(run_id: int):
+    _gh_or_503()
+    try:
+        return cicd.approve_run(run_id)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(502, f"GitHub refused: {e.response.status_code} {e.response.text[:200]}") from e
+    except httpx.HTTPError as e:
+        raise HTTPException(502, f"GitHub unreachable: {e}") from e
+
+
+@router.get("/dora")
+def get_dora(window: str = Query("7d", pattern="^(24h|7d|all)$")):
+    return {**dora.compute(hub().state, window), "baselines": settings().baselines.get("dora", {})}
+
+
+@router.get("/system")
+def get_system():
+    return system.fetch()

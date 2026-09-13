@@ -40,3 +40,22 @@ class InjectIn(BaseModel):
         if self.events is not None:
             return self.events
         return [{"source": self.source, "detail-type": self.detail_type, "time": self.time, "detail": self.detail or {}}]
+
+
+class AssignIn(BaseModel):
+    handle: str | None = Field(default=None, max_length=40)
+
+
+class TransitionIn(BaseModel):
+    status: str
+    body: str | None = None
+
+
+class BoardIssueIn(BaseModel):
+    title: str = Field(min_length=1, max_length=240)
+    description: str = ""
+    type: str = "Bug"
+    priority: str = "Medium"
+    assignee: str | None = None
+    status: str | None = None
+    labels: list[str] | None = None

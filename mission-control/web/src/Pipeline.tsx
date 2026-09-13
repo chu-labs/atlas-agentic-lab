@@ -35,21 +35,27 @@ export function Pipeline({
   let rows = open.slice(0, MAX_ROWS);
   if (rows.length === 0 && closed.length > 0) rows = [closed[0]]; // keep the last closed ticket on screen
   const recently = closed.filter((r) => !rows.includes(r)).slice(0, 4);
+  const lastErr = state.signal.last_error_ts ? secondsBetween(state.signal.last_error_ts, new Date(now).toISOString()) : null;
   return (
     <section className="pipeline">
       {rows.length === 0 && (
         <div className="pipeline-row">
           <div className="pipeline-head">
-            <span className="ticket-key idle">PIPELINE</span>
-            <span className="ticket-title muted">No ticket yet — Scout opens one when an error cluster crosses its threshold.</span>
+            <span className="ticket-key idle">WATCHING</span>
+            <span className="ticket-title muted">
+              Watching production · {lastErr == null ? "no errors seen" : `last error ${agoText(lastErr)}`} · Scout opens a ticket when a cluster crosses its threshold
+            </span>
           </div>
           <Chain row={null} gate={state.gate} stateAt={stateAt} now={now} onSelect={onSelect} selected={selected} />
         </div>
       )}
       {rows.map((row) => (
-        <div key={row.ticket ?? "row"} className={`pipeline-row ${row.escalated ? "is-escalated" : ""} ${row.closed ? "is-closed" : ""}`}>
+        <div
+          key={row.signature ?? row.ticket ?? "row"}
+          className={`pipeline-row ${row.escalated ? "is-escalated" : ""} ${row.closed ? "is-closed" : ""} ${row.observing ? "is-observing" : ""}`}
+        >
           <div className="pipeline-head">
-            <span className="ticket-key">{row.ticket}</span>
+            <span className={`ticket-key ${row.observing ? "observing" : ""}`}>{row.observing ? "OBSERVING" : row.ticket}</span>
             <span className="ticket-title">{row.title}</span>
             <span className="ticket-metas">
               {row.error && (
@@ -63,7 +69,22 @@ export function Pipeline({
             </span>
           </div>
           <Chain row={row} gate={state.gate} stateAt={stateAt} now={now} onSelect={onSelect} selected={selected} />
-          <DurationStrip row={row} stateAt={stateAt} now={now} />
+          {row.observing ? (
+            <div className="durations">
+              <span className="dur dur-live">
+                <span className="dur-name">Observing</span> {mmss(secondsBetween(row.first_ts, new Date(now).toISOString()))}
+              </span>
+              <span className="dur">
+                <span className="dur-name">Errors</span> {row.error?.count ?? 0}
+              </span>
+              <span className="dur">
+                <span className="dur-name">Signature</span> <code>{row.signature}</code>
+              </span>
+              <span className="dur dur-total muted">{row.stage === "triage" ? "Scout is triaging" : "waiting for Scout's threshold"}</span>
+            </div>
+          ) : (
+            <DurationStrip row={row} stateAt={stateAt} now={now} />
+          )}
         </div>
       ))}
       {recently.length > 0 && (
@@ -84,6 +105,12 @@ export function Pipeline({
       )}
     </section>
   );
+}
+
+function agoText(secs: number): string {
+  if (secs < 60) return `${Math.round(secs)} s ago`;
+  if (secs < 3600) return `${Math.round(secs / 60)} min ago`;
+  return `${(secs / 3600).toFixed(1)} h ago`;
 }
 
 function DurationStrip({ row, stateAt, now }: { row: PipelineRow; stateAt: number; now: number }) {
@@ -136,6 +163,7 @@ function Chain({
   const current = row ? ORDER[row.stage] : -1;
   const gateHere = !!row && gate.waiting && gate.ticket === row.ticket && row.stage === "human_gate";
   const pick = (s: Stage) => row?.ticket && onSelect({ kind: "stage", ticket: row.ticket, stage: s });
+  const live = !!row && !row.observing;
   const isSel = (s: Stage) => !!row && selected?.kind === "stage" && selected.ticket === row.ticket && selected.stage === s;
   return (
     <div className={`chain ${gateHere ? "chain-gate-live" : ""}`}>
@@ -154,9 +182,11 @@ function Chain({
           s === "human_gate" ? (
             <GateStage key={s} live={gateHere} gate={gate} row={row} entered={entered} stateAt={stateAt} now={now} cls={cls} onPick={() => pick(s)} />
           ) : (
-            <button key={s} className={cls.join(" ")} onClick={() => pick(s)} disabled={!row}>
+            <button key={s} className={cls.join(" ")} onClick={() => pick(s)} disabled={!live}>
               <span className="stage-label">{STAGE_LABEL[s]}</span>
-              <span className="stage-time">{entered ? hms(entered) : " "}</span>
+              <span className="stage-time">
+                {s === "error" && row?.observing && row.error ? `${row.error.count}× · first ${hms(row.error.first_seen)}` : entered ? hms(entered) : "\u00a0"}
+              </span>
             </button>
           );
         return (

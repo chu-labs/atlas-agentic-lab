@@ -31,7 +31,8 @@ def test_inject_walks_pipeline_and_persists(client):
         assert r.status_code == 201, r.text
         state = client.get("/api/state").json()
         if expected in {"error", "triage"}:
-            assert state["pipeline"] == [] and state["signal"]["untracked_count"] >= 1
+            assert [r for r in state["pipeline"] if not r["observing"]] == [] and state["signal"]["untracked_count"] >= 1
+            assert state["pipeline"][0]["observing"] is True and state["pipeline"][0]["stage"] == expected
             continue
         assert state["pipeline"][0]["stage"] == expected
     state = client.get("/api/state").json()

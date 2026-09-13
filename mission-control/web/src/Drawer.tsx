@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { authorityAt, belongsTo, errorSignature, isHeartbeat, segmentOf, stageEntries, stageOf, str, telemetryBetween } from "./attribution";
+import { Avatar } from "./Avatar";
 import { Markdown } from "./md";
+import { useFetch } from "./useFetch";
 import { STAGES, STAGE_LABEL, SEGMENT_LABEL, type FleetCard, type MissionEvent, type MissionState, type PipelineRow, type Selection, type Stage } from "./types";
 import { fmtInt, fmtUSD, hms, mmss } from "./time";
 
@@ -51,8 +53,10 @@ export function Drawer({
       <aside className={`drawer ${shown ? "on" : ""}`} role="dialog" aria-modal="true">
         {selection.kind === "stage" ? (
           <StageDrawer selection={selection} state={state} events={events} now={now} onClose={onClose} onSelect={onSelect} />
-        ) : (
+        ) : selection.kind === "agent" ? (
           <AgentDrawer handle={selection.handle} state={state} events={events} now={now} onClose={onClose} />
+        ) : (
+          <IssueDrawer issueKey={selection.key} state={state} onClose={onClose} onSelect={onSelect} />
         )}
       </aside>
     </>
@@ -166,9 +170,7 @@ function StageDrawer({
           <div className="actors">
             {actors.map(({ card, last, human }) => (
               <div key={card?.handle ?? last.actor?.handle ?? "x"} className="actor">
-                <span className="avatar" style={{ background: human ? "#f5b942" : card?.color ?? "#8f9bb8" }}>
-                  {human ? "👤" : card?.avatar ?? "🤖"}
-                </span>
+                <Avatar handle={last.actor?.handle} size={44} color={human ? "#f5b942" : card?.color} emoji={human ? "👤" : card?.avatar ?? "🤖"} />
                 <div className="actor-body">
                   <div className="actor-name">
                     {human ? last.actor?.display_name : card?.display_name ?? last.actor?.display_name}
@@ -359,7 +361,7 @@ function AgentDrawer({ handle, state, events, now, onClose }: { handle: string; 
         title={card.display_name}
         sub={card.remit}
         onClose={onClose}
-        avatar={<span className="avatar" style={{ background: card.color }}>{card.avatar}</span>}
+        avatar={<Avatar handle={card.handle} size={96} color={card.color} emoji={card.avatar} />}
       />
       <div className="drawer-kpis">
         <Kpi label="status" value={card.status.replace(/_/g, " ")} />
@@ -385,6 +387,104 @@ function AgentDrawer({ handle, state, events, now, onClose }: { handle: string; 
                 <span className="prose-kind">{g.e.detail_type}</span>
                 {g.n > 1 && <span className="count-tag">×{g.n}</span>}
                 <span className="prose-text">{textOf(g.e)}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </>
+  );
+}
+
+// ----------------------------------------------------------------------------- board issue
+
+interface IssueFull {
+  key: string;
+  type: string;
+  title: string;
+  status: string;
+  priority: string;
+  description: string;
+  labels: string[];
+  pr_url: string | null;
+  branch: string | null;
+  created_at: string;
+  updated_at: string;
+  assignee: { handle: string; display_name: string; color: string; avatar: string; kind: string; mode: string | null } | null;
+  reporter: { handle: string; display_name: string; color: string; avatar: string; kind: string } | null;
+  activity: { id: number; kind: string; from_value: string | null; to_value: string | null; body: string | null; created_at: string; actor: { handle: string; display_name: string; color: string; avatar: string; kind: string } }[];
+  comments: { id: number; body: string; created_at: string; author: { handle: string; display_name: string; color: string; avatar: string; kind: string } }[];
+}
+
+function IssueDrawer({ issueKey, state, onClose, onSelect }: { issueKey: string; state: MissionState; onClose: () => void; onSelect: (s: Selection) => void }) {
+  const { data, error } = useFetch<IssueFull>(`/api/board/issues/${issueKey}`, 5000);
+  const row = state.pipeline.find((r) => r.ticket === issueKey);
+  const board = state.links?.board;
+  if (!data) {
+    return (
+      <>
+        <DrawerHead title={issueKey} sub={error ?? "loading…"} onClose={onClose} />
+      </>
+    );
+  }
+  const feed = [
+    ...data.activity.map((a) => ({ id: `a${a.id}`, at: a.created_at, who: a.actor, kind: a.kind, text: a.body ?? (a.kind === "transitioned" ? `${a.from_value} → ${a.to_value}` : a.kind === "assigned" ? `assigned to ${a.to_value ?? "nobody"}` : a.to_value ?? "") })),
+    ...data.comments.map((c) => ({ id: `c${c.id}`, at: c.created_at, who: c.author, kind: "comment", text: c.body })),
+  ].sort((a, b) => a.at.localeCompare(b.at));
+  return (
+    <>
+      <DrawerHead
+        title={`${data.key} · ${data.type}`}
+        sub={data.title}
+        onClose={onClose}
+        avatar={data.assignee ? <Avatar handle={data.assignee.handle} size={96} color={data.assignee.color} emoji={data.assignee.avatar} /> : undefined}
+      />
+      <div className="drawer-kpis">
+        <Kpi label="status" value={data.status} />
+        <Kpi label="priority" value={data.priority} />
+        <Kpi label="assignee" value={data.assignee?.display_name ?? "—"} sub={data.assignee?.mode ?? data.assignee?.kind ?? ""} />
+        <Kpi label="updated" value={hms(data.updated_at)} sub={`created ${hms(data.created_at)}`} />
+      </div>
+      <div className="drawer-links">
+        {board && (
+          <a href={`${board.replace(/\/$/, "")}/issue/${data.key}`} target="_blank" rel="noreferrer">
+            open on the board ↗
+          </a>
+        )}
+        {data.pr_url && (
+          <a href={data.pr_url} target="_blank" rel="noreferrer">
+            pull request ↗
+          </a>
+        )}
+        {row && (
+          <button className="linkish" onClick={() => onSelect({ kind: "stage", ticket: data.key, stage: row.stage })}>
+            pipeline: {row.stage.replace("_", " ")} →
+          </button>
+        )}
+        {data.labels.map((l) => (
+          <span key={l} className="label">
+            {l}
+          </span>
+        ))}
+      </div>
+      <section className="drawer-section">
+        <h3>Description</h3>
+        {data.description ? <Markdown text={data.description} /> : <p className="muted">No description.</p>}
+      </section>
+      <section className="drawer-section">
+        <h3>
+          Activity <span className="muted">· {feed.length}</span>
+        </h3>
+        <ol className="prose">
+          {feed.map((f) => (
+            <li key={f.id}>
+              <span className="prose-time">{hms(f.at)}</span>
+              <span className="prose-body">
+                <span className="prose-who" style={{ color: f.who.color }}>
+                  {f.who.display_name}
+                </span>
+                <span className="prose-kind">{f.kind}</span>
+                <span className="prose-text">{f.kind === "comment" || f.kind === "reasoning" ? <Markdown text={f.text} /> : f.text}</span>
               </span>
             </li>
           ))}

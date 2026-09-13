@@ -29,6 +29,15 @@ DEFAULT_BASELINES = {
         "verify": 0.5,  # verify + close
     },
     "lane_label": "Traditional SDLC · small bug · typical",
+    # DORA benchmarks for the traditional team (illustrative until supplied) shown under the agentic tiles.
+    "dora": {
+        "deployment_frequency": "fortnightly",
+        "deployment_frequency_per_day": 1 / 14,
+        "lead_time_days": 14,
+        "change_failure_rate": 0.15,
+        "time_to_restore_days": 2,
+        "notes": "illustrative until supplied",
+    },
     "footnote": "Small fix; an XL fix runs to a quarter. Review and testing wait the same way.",
     "notes": "typical small bug",
 }
@@ -67,6 +76,9 @@ class Settings(BaseSettings):
     github_human_token: str = ""
     github_human_login: str = ""
     github_human_display_name: str = "Maroun"
+    # ECS names for the footer strip (GET /api/system); read with the task role, degrade gracefully locally.
+    ecs_cluster: str = ""
+    image_tag: str = ""
 
     board_url: str = ""
     platform_url: str = ""
@@ -92,16 +104,20 @@ class Settings(BaseSettings):
 
     @property
     def baselines(self) -> dict:
-        out = {**DEFAULT_BASELINES, "stage_days": dict(DEFAULT_BASELINES["stage_days"])}
+        out = {**DEFAULT_BASELINES, "stage_days": dict(DEFAULT_BASELINES["stage_days"]), "dora": dict(DEFAULT_BASELINES["dora"])}
         if self.human_baselines_json:
             try:
                 override = json.loads(self.human_baselines_json)
             except ValueError:
                 override = {}
             stage_days = override.pop("stage_days", None)
+            dora = override.pop("dora", None)
             out.update(override)
             if isinstance(stage_days, dict):
                 out["stage_days"].update(stage_days)
+            out["dora"] = dict(DEFAULT_BASELINES["dora"])
+            if isinstance(dora, dict):
+                out["dora"].update(dora)
         return out
 
     def queue_urls(self) -> dict[str, str]:

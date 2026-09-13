@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { MissionEvent, PipelineRow, Selection } from "./types";
 import { belongsTo, stageOf } from "./attribution";
+import { Avatar } from "./Avatar";
 import { hms, mmss, secondsBetween } from "./time";
 
 const COLORS: Record<string, string> = {
@@ -119,7 +120,8 @@ export function Timeline({
   return (
     <section className="timeline">
       <h2 className="panel-title">
-        Timeline <span className="panel-sub">{events.length ? `${events.length} events` : ""}</span>
+        Timeline <span className="count">{events.length}</span>
+        <span className="panel-sub">{groups.length !== events.length ? `${groups.length} rows · repeats collapsed` : "newest first"}</span>
       </h2>
       <div className="timeline-list" ref={listRef}>
         {groups.length === 0 && <div className="muted empty">No events yet.</div>}
@@ -136,9 +138,7 @@ export function Timeline({
             >
               <span className="row-time">{hms(e.ts)}</span>
               <span className="row-rel">{rel != null && rel >= 0 ? `+${mmss(rel)}` : ""}</span>
-              <span className="row-avatar" style={{ background: w.color }}>
-                {w.avatar}
-              </span>
+              <Avatar handle={e.actor?.handle ?? (e.source === "atlas.mission-control" ? "mission-control" : null)} size={32} color={w.color} emoji={w.avatar} className="row-avatar" />
               <span className="row-body">
                 <span className="row-name">{w.name}</span>
                 {w.human && <span className="human-tag">HUMAN</span>}

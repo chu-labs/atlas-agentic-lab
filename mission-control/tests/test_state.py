@@ -7,6 +7,11 @@ from mission.state import State, normalise
 from .script import HUMAN, PR, SCRIPT, T0, agent, ev
 
 
+def tickets(snap: dict) -> list[dict]:
+    """Ticket rows only: the observing row (errors, no ticket yet) is exercised in test_v3."""
+    return [r for r in snap["pipeline"] if not r.get("observing")]
+
+
 def test_pipeline_walks_the_script():
     st = State()
     followups = []
@@ -15,16 +20,16 @@ def test_pipeline_walks_the_script():
         snap = st.snapshot(now=T0 + timedelta(seconds=600))
         if expected in {"error", "triage"}:
             # errors never make a pipeline row: they live in the production signal until a ticket claims them
-            assert snap["pipeline"] == [], raw["detail-type"]
+            assert tickets(snap) == [], raw["detail-type"]
             assert snap["signal"]["untracked_count"] == min(i, 2) and snap["signal"]["latest"]["signature"] == "sig-1"
             assert (snap["signal"]["triage_since"] is not None) == (expected == "triage")
             continue
-        row = snap["pipeline"][0]
+        row = tickets(snap)[0]
         assert row["ticket"] == "ATLAS-142"
         assert row["stage"] == expected, f"after {raw['detail-type']} expected {expected}, got {row['stage']}"
 
     snap = st.snapshot()
-    row = snap["pipeline"][0]
+    row = tickets(snap)[0]
     assert row["ticket"] == "ATLAS-142" and row["closed"] is True
     assert row["title"] == "Null customer on invoice"
     # the pending error's timestamps were inherited by the ticket row
@@ -32,7 +37,7 @@ def test_pipeline_walks_the_script():
     assert row["error"]["count"] == 2 and row["error"]["first_seen"].startswith("2026-09-17T10:00:00")
     assert row["stages"]["triage"].startswith("2026-09-17T10:00:05")  # Scout started working at t=5
     assert set(row["stages"]) == {"error", "triage", "ticket", "code", "test", "pr", "human_gate", "merge", "deploy", "verify", "closed"}
-    assert len(snap["pipeline"]) == 1 and snap["signal"]["untracked_count"] == 0
+    assert len(tickets(snap)) == 1 and snap["signal"]["untracked_count"] == 0
     # derived durations: triage 0-20, code 40-120, review 120-180, gate 180-300, deploy 300-420, verify 420-490
     d = row["durations"]
     assert d["segments"] == {"triage": 20, "code": 80, "review": 60, "gate": 120, "deploy": 120, "verify": 70}
@@ -66,7 +71,7 @@ def test_gate_and_telemetry_midway():
     assert tel["error_to_closed_seconds"] == 282  # still open: measured to `now`
     assert tel["closed"] is False
 
-    d = snap["pipeline"][0]["durations"]
+    d = tickets(snap)[0]["durations"]
     assert d["open_segment"] == "gate" and d["segments"]["gate"] == 102  # waiting on the human right now
     assert d["segments"]["review"] == 60 and d["total"] == 282 and d["human"] == 102 and d["machine"] == 180
 
@@ -98,7 +103,7 @@ def test_escalation_is_terminal_and_teammates_come_and_go():
     for i, (_, raw) in enumerate(SCRIPT[:6], start=1):
         st.apply(normalise(raw, event_id=i))
     st.apply(normalise(ev("atlas.forge", "escalation.raised", 70, agent("forge"), "ATLAS-142", "Refused: business rule change", category="business_rule_change", assigned_to="tom")))
-    row = st.snapshot()["pipeline"][0]
+    row = tickets(st.snapshot())[0]
     assert row["escalated"] is True and row["escalation"]["category"] == "business_rule_change"
     assert next(c for c in st.snapshot()["fleet"] if c["handle"] == "forge")["status"] == "escalated"
 
@@ -114,16 +119,16 @@ def test_repeat_errors_count_on_the_open_ticket_not_a_new_row():
     st = State()
     for i, (_, raw) in enumerate(SCRIPT[:4], start=1):  # two errors, triage, incident.opened
         st.apply(normalise(raw, event_id=i))
-    assert st.snapshot()["pipeline"][0]["error"]["count"] == 2
+    assert tickets(st.snapshot())[0]["error"]["count"] == 2
     # the same signature keeps arriving while Forge works: no stray "NEW ERROR" row
     st.apply(normalise(ev("atlas.platform", "error.raised", 25, None, None, "500 again", signature="sig-1", message="x")))
     st.apply(normalise(ev("atlas.platform", "error.raised", 26, None, None, "500 again", signature="sig-1", message="x")))
-    rows = st.snapshot()["pipeline"]
+    rows = tickets(st.snapshot())
     assert len(rows) == 1 and rows[0]["ticket"] == "ATLAS-142" and rows[0]["error"]["count"] == 4
     # a different signature is a genuinely new, untracked error: it shows in the signal strip, never as a row
     st.apply(normalise(ev("atlas.platform", "error.raised", 27, None, None, "boom", signature="sig-2", message="y")))
     snap = st.snapshot(now=T0 + timedelta(seconds=30))
-    assert [r["ticket"] for r in snap["pipeline"]] == ["ATLAS-142"]
+    assert [r["ticket"] for r in tickets(snap)] == ["ATLAS-142"]
     assert snap["signal"]["untracked_count"] == 1 and snap["signal"]["latest"]["signature"] == "sig-2"
     assert snap["signal"]["total_10m"] == 5 and sum(snap["signal"]["rate"]) == 5
     assert st.active_ticket() == "ATLAS-142"
@@ -135,12 +140,12 @@ def test_incident_attaches_every_pending_row_with_its_signature():
     st.apply(normalise(ev("atlas.platform", "error.raised", 1, None, None, "b", signature="sig-B", message="b")))
     st.apply(normalise(ev("atlas.platform", "error.raised", 2, None, None, "a", signature="sig-A", message="a")))
     snap = st.snapshot(now=T0 + timedelta(seconds=5))
-    assert snap["pipeline"] == [] and snap["signal"]["untracked_signatures"] == 2 and snap["signal"]["untracked_count"] == 3
+    assert tickets(snap) == [] and snap["signal"]["untracked_signatures"] == 2 and snap["signal"]["untracked_count"] == 3
     st.apply(normalise(ev("atlas.scout", "agent.status", 3, agent("scout"), None, "triaging", status="working", thinking="hmm")))
     st.apply(normalise(ev("atlas.scout", "incident.opened", 10, agent("scout"), "ATLAS-7", "Opened ATLAS-7",
                           incident={"signature": "sig-A", "count": 2}, issue={"key": "ATLAS-7", "title": "A"})))
     snap = st.snapshot(now=T0 + timedelta(seconds=12))
-    rows = {r["ticket"]: r for r in snap["pipeline"]}
+    rows = {r["ticket"]: r for r in tickets(snap)}
     assert set(rows) == {"ATLAS-7"}
     assert rows["ATLAS-7"]["error"]["signature"] == "sig-A" and rows["ATLAS-7"]["error"]["count"] == 2
     assert rows["ATLAS-7"]["stages"]["error"].startswith("2026-09-17T10:00:00")  # earliest sig-A error
@@ -150,7 +155,7 @@ def test_incident_attaches_every_pending_row_with_its_signature():
     st.apply(normalise(ev("atlas.scout", "incident.opened", 20, agent("scout"), "ATLAS-8", "Opened ATLAS-8",
                           incident={"signature": "sig-B", "count": 1}, issue={"key": "ATLAS-8", "title": "B"})))
     snap = st.snapshot(now=T0 + timedelta(seconds=22))
-    rows = {r["ticket"]: r for r in snap["pipeline"]}
+    rows = {r["ticket"]: r for r in tickets(snap)}
     assert set(rows) == {"ATLAS-7", "ATLAS-8"} and rows["ATLAS-8"]["error"]["count"] == 1
     assert snap["signal"]["untracked_count"] == 0
 
@@ -182,7 +187,7 @@ def _incident(sec: float, ticket: str = "ATLAS-37", signature: str | None = SIG)
 
 
 def _only_ticket_row(st: State, ticket: str) -> dict:
-    rows = st.snapshot()["pipeline"]
+    rows = tickets(st.snapshot())
     assert [r["ticket"] for r in rows] == [ticket], [(r["ticket"], r["stage"], r["title"]) for r in rows]
     return rows[0]
 
@@ -195,7 +200,7 @@ def test_varying_messages_before_and_after_incident_share_one_row():
         st.apply(normalise(raw))
     # the 'triage' pseudo-ticket must not become a pipeline row nor swallow the untracked errors
     snap = st.snapshot(now=T0 + timedelta(seconds=6))
-    assert snap["pipeline"] == [] and snap["signal"]["untracked_count"] == 2 and snap["signal"]["triage_since"] is not None
+    assert tickets(snap) == [] and snap["signal"]["untracked_count"] == 2 and snap["signal"]["triage_since"] is not None
     st.apply(normalise(_err(4, "1 policy missing from 30-day run")))
     st.apply(normalise(_incident(10)))
     row = _only_ticket_row(st, "ATLAS-37")
@@ -262,7 +267,7 @@ def test_awaiting_human_counter_drops_on_every_way_out_of_the_gate():
     st = to_gate()
     st.apply(normalise(SCRIPT[9][1]))  # human.approved
     snap = st.snapshot()
-    assert snap["gate"]["awaiting"] == 0 and snap["gate"]["waiting"] is False and snap["pipeline"][0]["stage"] == "merge"
+    assert snap["gate"]["awaiting"] == 0 and snap["gate"]["waiting"] is False and tickets(snap)[0]["stage"] == "merge"
 
     st = to_gate()
     st.apply(normalise(ev("atlas.mission-control", "human.rejected", 200, HUMAN, "ATLAS-142", "no", pr=PR, reason="no")))
@@ -287,4 +292,4 @@ def test_stale_row_on_the_same_pr_leaves_the_gate_with_the_approval():
     st.apply(normalise(ev("atlas.mission-control", "human.approved", 300, HUMAN, "ATLAS-143", "approved", pr=PR, waited_seconds=110)))
     snap = st.snapshot()
     assert snap["gate"]["awaiting"] == 0 and snap["gate"]["waiting"] is False
-    assert {r["stage"] for r in snap["pipeline"]} == {"merge"}
+    assert {r["stage"] for r in tickets(snap)} == {"merge"}

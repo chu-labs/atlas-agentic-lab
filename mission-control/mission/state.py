@@ -113,6 +113,7 @@ class State:
             self.errors: list[dict] = []  # every error.raised in the last SIGNAL_WINDOW (for the rate sparkline)
             self.untracked: dict[str, dict] = {}  # signature -> bucket of errors no open ticket has claimed
             self.triage_since: datetime | None = None  # Scout started working before a ticket existed
+            self.last_error_ts: datetime | None = None
             self.gate: dict = {"waiting": False, "pr": None, "ticket": None, "since": None}
             self.gate_notified: set[int] = set()
             self.telemetry: dict[str, dict] = {}  # ticket -> {"agents": {handle: {...}}}
@@ -212,6 +213,7 @@ class State:
         row["updated_ts"] = max(row["updated_ts"], ts)
 
     def _record_error(self, d: dict, ts: datetime, sig: str | None) -> None:
+        self.last_error_ts = max(self.last_error_ts or ts, ts)
         self.errors.append({"ts": ts, "signature": sig, "message": d.get("message"), "endpoint": d.get("endpoint"),
                             "error_type": d.get("error_type"), "status_code": d.get("status_code"), "method": d.get("method")})
         cutoff = ts - SIGNAL_WINDOW
@@ -519,7 +521,9 @@ class State:
                     buckets[n - 1 - i] += 1
             latest = max(self.untracked.values(), key=lambda b: b["last_ts"], default=None)
             last_minute = sum(1 for x in self.errors if (now - x["ts"]).total_seconds() < 60)
+            last_error = max((x["ts"] for x in self.errors), default=self.last_error_ts)
             return {
+                "last_error_ts": iso(last_error),
                 "rate": buckets,
                 "bucket_seconds": SIGNAL_BUCKET,
                 "total_10m": len(self.errors),
@@ -530,11 +534,66 @@ class State:
                 "triage_since": iso(self.triage_since),
             }
 
+    def observing_row(self, now: datetime) -> dict | None:
+        """While errors arrive and no ticket claims them the pipeline still shows what is happening.
+
+        One row, keyed by the dominant untracked signature; it becomes the ticket row in place once
+        Scout opens the ticket (same signature, same position).
+        """
+        with self.lock:
+            self._prune_signal(now)
+            if not self.untracked:
+                return None
+            dominant = max(self.untracked.values(), key=lambda b: (b["count"], b["last_ts"]))
+            total = sum(b["count"] for b in self.untracked.values())
+            first = min(b["first_ts"] for b in self.untracked.values())
+            stages = {"error": first}
+            stage = "error"
+            if self.triage_since:
+                stages["triage"] = self.triage_since
+                stage = "triage"
+            return {
+                "ticket": None,
+                "observing": True,
+                "title": dominant.get("message") or dominant.get("error_type") or dominant["signature"] or "Production error",
+                "stage": stage,
+                "stages": {k: iso(v) for k, v in stages.items()},
+                "escalated": False,
+                "escalation": None,
+                "verify_failed": False,
+                "pr": None,
+                "error": {
+                    "signature": dominant["signature"],
+                    "endpoint": dominant.get("endpoint"),
+                    "error_type": dominant.get("error_type"),
+                    "message": dominant.get("message"),
+                    "count": total,
+                    "first_seen": iso(first),
+                    "last_seen": iso(dominant["last_ts"]),
+                },
+                "signature": dominant["signature"],
+                "first_ts": iso(first),
+                "updated_ts": iso(dominant["last_ts"]),
+                "closed_ts": None,
+                "closed": False,
+                "durations": {
+                    "segments": {"triage": max(0.0, (now - first).total_seconds())},
+                    "open_segment": "triage",
+                    "total": max(0.0, (now - first).total_seconds()),
+                    "human": 0.0,
+                    "machine": max(0.0, (now - first).total_seconds()),
+                    "frozen": False,
+                },
+            }
+
     def snapshot(self, baselines: dict | None = None, now: datetime | None = None) -> dict:
         now = now or datetime.now(UTC)
         with self.lock:
             rows = sorted(self.rows.values(), key=lambda r: r["updated_ts"], reverse=True)[:12]
             pipeline = []
+            observing = self.observing_row(now)
+            if observing:
+                pipeline.append(observing)
             for r in rows:
                 err = r.get("error")
                 pipeline.append(
@@ -553,6 +612,7 @@ class State:
                         "updated_ts": iso(r["updated_ts"]),
                         "closed_ts": iso(r["closed_ts"]),
                         "closed": r["stage"] == "closed",
+                        "observing": False,
                         "durations": self.durations(r, now),
                     }
                 )

@@ -81,6 +81,7 @@ export interface PipelineRow {
   updated_ts: string;
   closed_ts: string | null;
   closed: boolean;
+  observing?: boolean; // errors are arriving; no ticket yet
   durations: Durations;
 }
 
@@ -123,6 +124,7 @@ export interface Signal {
     method?: string | null;
   } | null;
   triage_since: string | null;
+  last_error_ts: string | null;
 }
 
 export interface Gate {
@@ -176,7 +178,7 @@ export interface MissionState {
   links?: { board?: string; platform?: string; github?: string };
 }
 
-export type Selection = { kind: "stage"; ticket: string; stage: Stage } | { kind: "agent"; handle: string };
+export type Selection = { kind: "stage"; ticket: string; stage: Stage } | { kind: "agent"; handle: string } | { kind: "issue"; key: string };
 
 export interface MissionEvent {
   id: number;
