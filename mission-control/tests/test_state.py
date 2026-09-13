@@ -249,3 +249,42 @@ def test_unmatched_pending_rows_are_absorbed_when_nothing_else_is_open():
     st.apply(normalise(_incident(5)))
     row = _only_ticket_row(st, "ATLAS-37")
     assert row["error"]["count"] == 1 and row["stages"]["triage"].startswith("2026-09-17T10:00:01")
+
+
+def test_awaiting_human_counter_drops_on_every_way_out_of_the_gate():
+    def to_gate() -> State:
+        st = State()
+        for i, (_, raw) in enumerate(SCRIPT[:9], start=1):  # up to review.posted
+            st.apply(normalise(raw, event_id=i))
+        assert st.snapshot()["gate"]["awaiting"] == 1 and st.snapshot()["gate"]["waiting"] is True
+        return st
+
+    st = to_gate()
+    st.apply(normalise(SCRIPT[9][1]))  # human.approved
+    snap = st.snapshot()
+    assert snap["gate"]["awaiting"] == 0 and snap["gate"]["waiting"] is False and snap["pipeline"][0]["stage"] == "merge"
+
+    st = to_gate()
+    st.apply(normalise(ev("atlas.mission-control", "human.rejected", 200, HUMAN, "ATLAS-142", "no", pr=PR, reason="no")))
+    assert st.snapshot()["gate"]["awaiting"] == 0
+
+    st = to_gate()  # merged straight on GitHub: no ticket on the event, matched by PR number
+    st.apply(normalise(ev("atlas.github", "pr.merged", 200, None, None, "merged", pr={"number": 17}, sha="abc")))
+    assert st.snapshot()["gate"]["awaiting"] == 0 and st.snapshot()["gate"]["waiting"] is False
+
+    st = to_gate()
+    st.apply(normalise(ev("atlas.conductor", "ticket.closed", 200, agent("conductor"), "ATLAS-142", "closed", pr={"number": 17})))
+    assert st.snapshot()["gate"]["awaiting"] == 0 and st.snapshot()["gate"]["waiting"] is False
+
+
+def test_stale_row_on_the_same_pr_leaves_the_gate_with_the_approval():
+    """Two tickets ended up pointing at PR #17 (a re-triage); approving the PR must not leave a ghost at the gate."""
+    st = State()
+    for i, (_, raw) in enumerate(SCRIPT[:9], start=1):
+        st.apply(normalise(raw, event_id=i))
+    st.apply(normalise(ev("atlas.sentinel", "review.posted", 190, agent("sentinel"), "ATLAS-143", "reviewed", pr=PR)))
+    assert st.snapshot()["gate"]["awaiting"] == 2
+    st.apply(normalise(ev("atlas.mission-control", "human.approved", 300, HUMAN, "ATLAS-143", "approved", pr=PR, waited_seconds=110)))
+    snap = st.snapshot()
+    assert snap["gate"]["awaiting"] == 0 and snap["gate"]["waiting"] is False
+    assert {r["stage"] for r in snap["pipeline"]} == {"merge"}

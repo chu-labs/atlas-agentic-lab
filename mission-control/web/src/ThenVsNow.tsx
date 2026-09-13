@@ -2,14 +2,20 @@ import { STAGES, STAGE_LABEL, type Baselines, type MissionState, type PipelineRo
 import { fmtInt, fmtUSD, mmss } from "./time";
 import { useTween } from "./useMission";
 
-/** Traditional-SDLC calendar days for each of our eleven stages, from the baselines' stage_days. */
-export function baselineDays(b: Baselines): Record<Stage, number> {
+/** A lane column: one of our eleven stages, or the traditional "backlog wait" that has no agentic counterpart. */
+export type LaneKey = Stage | "backlog_wait";
+export const LANE_KEYS: LaneKey[] = ["error", "triage", "ticket", "backlog_wait", "code", "test", "pr", "human_gate", "merge", "deploy", "verify", "closed"];
+const LANE_LABEL: Record<LaneKey, string> = { ...STAGE_LABEL, error: "Detect", human_gate: "Review", deploy: "Change approval", backlog_wait: "Backlog wait" };
+
+/** Traditional-SDLC calendar days per lane column, from the baselines' stage_days. */
+export function baselineDays(b: Baselines): Record<LaneKey, number> {
   const d = b.stage_days || {};
   const g = (k: string) => Number(d[k] ?? 0);
   return {
     error: g("detect"),
     triage: g("triage"),
     ticket: g("ticket"),
+    backlog_wait: g("backlog_wait"),
     code: g("code"),
     test: g("test"),
     pr: g("pr"),
@@ -40,6 +46,12 @@ export function fmtDaysShort(days: number): string {
   return Number.isInteger(days) ? `${days}d` : `${days.toFixed(1)}d`;
 }
 
+function fmtDaysLong(days: number): string {
+  if (days < 1) return `${Math.round(days * 24)} hours`;
+  const r = Math.round(days * 2) / 2;
+  return `${Number.isInteger(r) ? r : r.toFixed(1)} days`;
+}
+
 export function ThenVsNow({
   state,
   stateAt,
@@ -56,7 +68,7 @@ export function ThenVsNow({
   const b = state.baselines;
   const t = state.telemetry;
   const days = baselineDays(b);
-  const thenTotalDays = STAGES.reduce((a, s) => a + days[s], 0);
+  const thenTotalDays = LANE_KEYS.reduce((a, s) => a + days[s], 0);
   const live = row ? liveStageSeconds(row, now) : {};
   const drift = row && !row.closed && !row.escalated ? (now - stateAt) / 1000 : 0;
   const nowTotal = row ? row.durations.total + drift : 0;
@@ -86,7 +98,12 @@ export function ThenVsNow({
         parts={STAGES.map((s) => ({ s, v: live[s] ?? 0, label: live[s] ? mmss(live[s]) : "" }))}
         active={row && !row.closed && !row.escalated ? row.stage : null}
       />
-      <Lane title="Then · traditional SDLC" kind="then" parts={STAGES.map((s) => ({ s, v: days[s] * 86400, label: fmtDaysShort(days[s]) }))} active={null} />
+      <Lane
+        title={`Then · ${b.lane_label ?? "traditional SDLC"}`}
+        kind="then"
+        parts={LANE_KEYS.map((s) => ({ s, v: days[s] * 86400, label: fmtDaysShort(days[s]) }))}
+        active={null}
+      />
       <div className="tvn-cost">
         <span>
           <b className="tvn-cost-now">{fmtUSD(cost)}</b> of model time
@@ -111,15 +128,10 @@ export function ThenVsNow({
             human <b className="amber">{mmss(humanSecs)}</b> · machine <b>{mmss(Math.max(0, nowTotal - humanSecs))}</b>
           </span>
         )}
-        <span className="tvn-note">baselines {b.notes ?? "illustrative until supplied"}</span>
       </div>
+      {b.footnote && <div className="tvn-foot">{b.footnote}</div>}
     </section>
   );
-}
-
-function fmtDaysLong(days: number): string {
-  if (days < 1) return `${Math.round(days * 24)} hours`;
-  return `${Number.isInteger(days) ? days : days.toFixed(1)} days`;
 }
 
 function Lane({
@@ -130,7 +142,7 @@ function Lane({
 }: {
   title: string;
   kind: "now" | "then";
-  parts: { s: Stage; v: number; label: string }[];
+  parts: { s: LaneKey; v: number; label: string }[];
   active: Stage | null;
 }) {
   const shown = parts.filter((p) => p.v > 0);
@@ -149,9 +161,9 @@ function Lane({
               key={p.s}
               className={`lane-seg seg-${p.s} ${active === p.s ? "seg-active" : ""}`}
               style={{ flexGrow: grows[i] }}
-              title={`${STAGE_LABEL[p.s]} ${p.label}`}
+              title={`${kind === "then" ? LANE_LABEL[p.s] : STAGE_LABEL[p.s as Stage]} ${p.label}`}
             >
-              {share >= 11 && <span className="lane-seg-label">{STAGE_LABEL[p.s]}</span>}
+              {share >= 11 && <span className="lane-seg-label">{kind === "then" ? LANE_LABEL[p.s] : STAGE_LABEL[p.s as Stage]}</span>}
               {share >= 7 && <span className="lane-seg-val">{p.label}</span>}
             </div>
           );

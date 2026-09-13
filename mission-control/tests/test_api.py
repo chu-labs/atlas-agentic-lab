@@ -14,7 +14,8 @@ def test_health_open_and_state_seeded(client, monkeypatch):
     state = client.get("/api/state").json()
     assert [c["handle"] for c in state["fleet"]] == ["scout", "forge", "sentinel", "conductor", "watchtower"]
     assert all(c["authority"]["can_merge"] is False for c in state["fleet"])
-    assert state["baselines"]["human_days_error_to_pr"] == 3.5
+    assert state["baselines"]["human_days_error_to_closed"] == 14
+    assert sum(state["baselines"]["stage_days"].values()) == 14 and state["baselines"]["stage_days"]["backlog_wait"] == 7
     assert state["gate"]["waiting"] is False and state["pipeline"] == []
 
     monkeypatch.setattr(settings(), "basic_auth_user", "u")

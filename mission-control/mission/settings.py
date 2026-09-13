@@ -7,26 +7,30 @@ from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# A SMALL production bug on a traditional team, calendar days per stage (owner-supplied).
 DEFAULT_BASELINES = {
-    "human_days_error_to_pr": 3.5,
-    "human_days_error_to_closed": 9,
+    "human_days_error_to_pr": 10.5,  # detect + triage + backlog wait + code + test
+    "human_days_error_to_closed": 14,
     "human_hourly_rate_aud": 185,
     # Engineering hours a traditional team would book on the same fix (drives the cost comparison).
     "human_engineering_hours": 13,
-    # Traditional SDLC calendar days per stage; the "then" lane of Then vs now.
+    # The "then" lane of Then vs now. backlog_wait has no agentic counterpart and is drawn as a gap.
     "stage_days": {
-        "detect": 1.5,
-        "triage": 1,
-        "ticket": 0.5,
-        "code": 2,
+        "detect": 1,  # reactive: a customer notices and reports
+        "triage": 0.5,  # support validates: 10 minutes to hours (triage + ticket)
+        "ticket": 0,
+        "backlog_wait": 7,  # BAU backlog, picked up in a fortnightly sprint
+        "code": 1,
         "test": 1,
-        "pr": 0.5,
-        "review": 1.5,
-        "gate": 2,
-        "deploy": 1,
-        "verify": 0.5,
+        "pr": 0,
+        "review": 1,
+        "gate": 0,
+        "deploy": 2,  # change approval / release cadence
+        "verify": 0.5,  # verify + close
     },
-    "notes": "illustrative until supplied",
+    "lane_label": "Traditional SDLC · small bug · typical",
+    "footnote": "Small fix; an XL fix runs to a quarter. Review and testing wait the same way.",
+    "notes": "typical small bug",
 }
 
 

@@ -392,6 +392,11 @@ section, aside, .app > * { min-height: 0; min-width: 0; }
 .lane-now .seg-error, .lane-now .seg-triage { background: #4a1414; color: #ffd0d0; }
 .lane-now .seg-active { animation: pulse 1.6s ease-in-out infinite; outline: 2px solid #7aa2ff; outline-offset: -2px; }
 .lane-then .lane-seg { background: repeating-linear-gradient(135deg, #1a2338 0 6px, #202b45 6px 12px); color: var(--muted); border: 1px dashed #2f3b5c; }
+/* the traditional backlog wait: a gap, nothing happens, no agentic counterpart */
+.lane-then .seg-backlog_wait { background: transparent; border: 1px dashed #3a4666; color: var(--dim); }
+.lane-then .seg-backlog_wait .lane-seg-label::before { content: "⋯ "; }
+.tvn-foot { padding: 4px 16px 0; color: var(--dim); font-size: 0.9rem; font-style: italic; }
+.tvn-large .tvn-foot { font-size: 1rem; }
 .lane-then .seg-human_gate { background: repeating-linear-gradient(135deg, #2a2210 0 6px, #352b12 6px 12px); color: #d9c48a; border-color: #6b4e0f; }
 .tvn-cost { padding: 4px 16px 0; color: var(--muted); font-size: 0.95rem; display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: baseline; }
 .tvn-cost b { color: var(--text); font-size: 1.25rem; }

@@ -335,10 +335,10 @@ class State:
                         )
                 elif kind in {"human.approved", "pr.merged"}:
                     self._enter(row, "merge", ts)
-                    self._clear_gate(row)
+                    self._clear_gate(row, ts)
                 elif kind == "human.rejected":
                     self._enter(row, "code", ts, back=True)
-                    self._clear_gate(row)
+                    self._clear_gate(row, ts)
                 elif kind == "deploy.completed":
                     self._enter(row, "deploy", ts)
                 elif kind == "verify.passed":
@@ -350,6 +350,7 @@ class State:
                 elif kind == "ticket.closed":
                     self._enter(row, "closed", ts)
                     row["closed_ts"] = row["closed_ts"] or ts
+                    self._clear_gate(row, ts)
                 elif kind == "escalation.raised":
                     row["escalated"] = True
                     row["escalation"] = {"summary": e.get("summary"), "category": d.get("category"), "to": d.get("assigned_to")}
@@ -357,9 +358,23 @@ class State:
                 row["updated_ts"] = max(row["updated_ts"], ts)
         return followups
 
-    def _clear_gate(self, row: dict) -> None:
-        if self.gate.get("waiting") and self.gate.get("ticket") == row["ticket"]:
+    def _clear_gate(self, row: dict, ts: datetime | None = None) -> None:
+        """The human has decided (or the PR is gone): nothing about this PR waits on a human any more."""
+        number = (row.get("pr") or {}).get("number")
+        gate_pr = (self.gate.get("pr") or {}).get("number")
+        if self.gate.get("waiting") and (self.gate.get("ticket") == row["ticket"] or (number is not None and gate_pr == number)):
             self.gate = {"waiting": False, "pr": self.gate.get("pr"), "ticket": row["ticket"], "since": None}
+        if number is None:
+            return
+        # any other open row parked at the gate for the same PR moves with it
+        for other in self._open_ticket_rows():
+            if other is not row and other["stage"] == "human_gate" and (other.get("pr") or {}).get("number") == number:
+                self._enter(other, row["stage"], ts or other["updated_ts"], back=True)
+
+    def awaiting_human(self) -> int:
+        """Tickets whose current stage is the human gate. What the "PRs awaiting human" counter shows."""
+        with self.lock:
+            return sum(1 for r in self._open_ticket_rows() if r["stage"] == "human_gate" and not r["escalated"])
 
     def _apply_fleet(self, e: dict, ticket: str | None) -> None:
         d = e["detail"] or {}
@@ -546,6 +561,7 @@ class State:
             gate["waited_seconds"] = (
                 max(0, (now - self.gate["since"]).total_seconds()) if gate["waiting"] and self.gate.get("since") else 0
             )
+            gate["awaiting"] = self.awaiting_human()
             active = self.active_ticket()
             fleet = [
                 {**c, "last_seen": iso(c["last_seen"])}

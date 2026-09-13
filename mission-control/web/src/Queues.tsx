@@ -5,7 +5,7 @@ import { useTween } from "./useMission";
 export function Queues({ state }: { state: MissionState }) {
   const prodErrors = state.queues["prod-errors"] ?? 0;
   const work = state.queues["forge"] ?? 0;
-  const awaiting = state.pipeline.filter((r) => !r.closed && !r.escalated && r.stage === "human_gate").length || (state.gate.waiting ? 1 : 0);
+  const awaiting = state.gate.awaiting ?? 0; // server-derived: only tickets whose current stage is human_gate
   const a = useTween(prodErrors);
   const b = useTween(work);
   const c = useTween(awaiting);

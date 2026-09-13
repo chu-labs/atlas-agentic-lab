@@ -131,6 +131,7 @@ export interface Gate {
   ticket: string | null;
   since: string | null;
   waited_seconds: number;
+  awaiting: number; // tickets whose current stage is the human gate (server truth)
 }
 
 export interface Telemetry {
@@ -154,6 +155,8 @@ export interface Baselines {
   human_hourly_rate_aud: number;
   human_engineering_hours: number;
   stage_days: Record<string, number>;
+  lane_label?: string;
+  footnote?: string;
   notes?: string;
 }
 
