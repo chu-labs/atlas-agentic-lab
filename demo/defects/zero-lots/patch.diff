@@ -1,0 +1,35 @@
+diff --git a/atlas/domain/risk.py b/atlas/domain/risk.py
+index a58593e..b398383 100644
+--- a/atlas/domain/risk.py
++++ b/atlas/domain/risk.py
+@@ -23,11 +23,7 @@ def claims_pillar(b: Building, claims: list[Claim], as_of: date) -> tuple[int, l
+     recent = [c for c in claims if (as_of - c.loss_date).days <= 5 * 365 and c.status != "declined"]
+     if not recent:
+         return 5, []
+-    if b.lots <= 0:
+-        # A building with no lots cannot have a per-lot frequency; treat as a single risk unit.
+-        lots = 1
+-    else:
+-        lots = b.lots
++    lots = b.lots
+     freq_per_lot_year = len(recent) / lots / 5
+     incurred = sum((c.incurred for c in recent), start=0)
+     severity = float(incurred) / len(recent)
+diff --git a/tests/test_risk.py b/tests/test_risk.py
+index e9a6ff0..ec272a5 100644
+--- a/tests/test_risk.py
++++ b/tests/test_risk.py
+@@ -23,13 +23,6 @@ def test_claims_raise_the_score(building):
+     assert risk_profile(building, claims, AS_OF).score > risk_profile(building, [], AS_OF).score
+ 
+ 
+-def test_building_with_zero_lots_does_not_crash(building):
+-    b = replace(building, lots=0)
+-    claims = [make_claim(1, date(2026, 3, 1))]
+-    p = risk_profile(b, claims, AS_OF)
+-    assert 0 <= p.score <= 100
+-
+-
+ def test_declined_claims_are_ignored(building):
+     declined = [make_claim(i, date(2026, 2, 1), status="declined") for i in range(10)]
+     assert risk_profile(building, declined, AS_OF).pillars["claims"] == risk_profile(building, [], AS_OF).pillars["claims"]

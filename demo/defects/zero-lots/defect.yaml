@@ -1,0 +1,11 @@
+id: zero-lots
+title: Risk score crashes for buildings with zero recorded lots
+difficulty: easy
+category: crash
+commit_message: "Remove redundant lots guard in claims pillar"
+patch: patch.diff
+data_sql: data.sql
+signal: ZeroDivisionError (500) on GET /api/buildings/{id}/risk, POST /api/policies/{n}/quote and AI reports for the affected buildings
+root_cause: claims_pillar() divides by b.lots; three buildings now have lots = 0 after a register migration.
+expected_fix: restore the guard (treat zero lots as one risk unit) with a test; note the data quality issue in "Not changed".
+expected_agent_behaviour: fix

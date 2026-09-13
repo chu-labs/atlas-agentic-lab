@@ -1,0 +1,37 @@
+diff --git a/atlas/api/routes.py b/atlas/api/routes.py
+index c14d6d6..657bab4 100644
+--- a/atlas/api/routes.py
++++ b/atlas/api/routes.py
+@@ -33,10 +33,10 @@ def list_policies(
+     else:
+         start, end = renewals.renewal_window(today, due_within_days)
+     policies = repo.active_policies_expiring_between(start, end)[:limit]
+-    buildings = repo.buildings_by_ids([p.building_id for p in policies])
+     out = []
+     for p in policies:
+-        b = buildings.get(p.building_id)
++        b = repo.get_building(p.building_id)
++        profile = risk.risk_profile(b, repo.claims_for_building(b.id), today) if b else None
+         out.append(
+             PolicyOut(
+                 **{k: getattr(p, k) for k in PolicyOut.model_fields if hasattr(p, k)},
+@@ -44,6 +44,7 @@ def list_policies(
+                 plan_number=b.plan_number if b else None,
+                 state=b.state if b else None,
+                 days_until_expiry=renewals.days_until_expiry(p, today),
++                risk_band=profile.band if profile else None,
+             )
+         )
+     return out
+diff --git a/atlas/api/schemas.py b/atlas/api/schemas.py
+index e2b7cb3..3c436e6 100644
+--- a/atlas/api/schemas.py
++++ b/atlas/api/schemas.py
+@@ -38,6 +38,7 @@ class PolicyOut(BaseModel):
+     inception_date: date
+     expiry_date: date
+     days_until_expiry: int | None = None
++    risk_band: str | None = None
+     sum_insured: Decimal
+     base_premium: Decimal
+     status: str

@@ -38,7 +38,7 @@ def env_for(app: str) -> dict[str, str]:
 
 def run_module(app: str, *args: str) -> int:
     spec = APPS[app]
-    env = {**os.environ, **env_for(app)}
+    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"} | env_for(app)
     return subprocess.run(["uv", "run", "python", "-m", spec["module"], *args], cwd=spec["cwd"], env=env).returncode
 
 

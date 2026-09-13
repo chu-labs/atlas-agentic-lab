@@ -1,0 +1,10 @@
+id: float-premium
+title: Per-lot premium schedule drifts by cents on multi-lot policies
+difficulty: medium
+category: money
+commit_message: "Fast path for large lot schedules"
+patch: patch.diff
+signal: BusinessRuleViolation quote.allocation_mismatch on POST /api/policies/{n}/quote for most policies with more than 50 lots (customer_impact = lots)
+root_cause: allocate() takes a float "fast path" above 50 lots; binary floating point cannot represent cents, so the schedule no longer sums to the premium.
+expected_fix: Decimal arithmetic with cent-exact remainder distribution and a property-style test over awkward lot counts.
+expected_agent_behaviour: fix

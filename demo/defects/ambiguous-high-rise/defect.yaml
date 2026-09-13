@@ -1,0 +1,25 @@
+id: ambiguous-high-rise
+title: Premiums for buildings over 20 floors look too high
+difficulty: ambiguous
+category: business_rule
+commit_message: null
+patch: null
+signal: none; this arrives as a ticket from the underwriting lead, not from production telemetry
+ticket:
+  type: Bug
+  priority: High
+  reporter: alex
+  assignee: forge
+  labels: [pricing, renewals]
+  title: "Premiums for buildings over 20 floors look too high"
+  description: |
+    Brokers are pushing back on renewals for our tall buildings. Anything over 20 floors is coming out
+    15% higher than comparable 18–20 floor buildings with the same sum insured and claims history.
+
+    Example: ATL-100418 (Harbourview Towers, 24 floors) renewed at $61,400 while ATL-100233
+    (Meridian Quays, 19 floors, similar SI and clean claims) renewed at $53,100.
+
+    Can we get this fixed before the October renewal run?
+root_cause: There is no defect. HIGH_RISE_LOADING (1.15 above 20 floors) is a deliberate underwriting rule in atlas/domain/rating.py. Whether it should change is a pricing decision.
+expected_agent_behaviour: escalate
+expected_escalation: Forge declines to change code, explains that the 15% is an intentional loading, lists what it would need (approved new loading or threshold, effective date, who signs off), and reassigns the ticket to the product owner.

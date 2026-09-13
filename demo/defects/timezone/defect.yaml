@@ -1,0 +1,10 @@
+id: timezone
+title: Expiry dates converted to UTC land a day early
+difficulty: medium
+category: timezone
+commit_message: "Normalise expiry instants to UTC for consistency"
+patch: patch.diff
+signal: BusinessRuleViolation quote.expired_policy on POST /api/policies/{n}/quote for policies expiring today; days_until_expiry off by one everywhere
+root_cause: _expiry_utc() converts midnight Sydney to UTC (14:00 the previous day) and takes the date, so every expiry moves one day earlier.
+expected_fix: compare business dates directly; remove the UTC conversion; test at 23:30 AEST.
+expected_agent_behaviour: fix

@@ -1,0 +1,78 @@
+diff --git a/atlas/domain/renewals.py b/atlas/domain/renewals.py
+index 47a18cd..61a9554 100644
+--- a/atlas/domain/renewals.py
++++ b/atlas/domain/renewals.py
+@@ -1,9 +1,16 @@
+ """Renewal window logic. Dates are business dates in the business timezone."""
+ from __future__ import annotations
+ 
+-from datetime import date, datetime, timedelta
++from datetime import UTC, date, datetime, time, timedelta
+ from zoneinfo import ZoneInfo
+ 
++BUSINESS_TZ = ZoneInfo("Australia/Sydney")
++
++
++def _expiry_utc(policy: Policy) -> date:
++    """Expiry as a UTC calendar date so it compares consistently with server timestamps."""
++    return datetime.combine(policy.expiry_date, time.min, tzinfo=BUSINESS_TZ).astimezone(UTC).date()
++
+ from .models import Policy
+ 
+ 
+@@ -29,9 +36,9 @@ def due_for_renewal(policies: list[Policy], today: date, days: int = 30) -> list
+ 
+ 
+ def days_until_expiry(policy: Policy, today: date) -> int:
+-    return (policy.expiry_date - today).days
++    return (_expiry_utc(policy) - today).days
+ 
+ 
+ def has_expired(policy: Policy, today: date) -> bool:
+     """A policy is expired the day after its expiry date; on the expiry date itself it is still in force."""
+-    return policy.expiry_date < today
++    return _expiry_utc(policy) < today
+diff --git a/tests/test_api.py b/tests/test_api.py
+index defcbb7..df79ff2 100644
+--- a/tests/test_api.py
++++ b/tests/test_api.py
+@@ -109,16 +109,6 @@ def test_renewals_reconcile_is_clean(client, monkeypatch):
+     assert r.status_code == 200 and r.json()["missing"] == 0
+ 
+ 
+-def test_policy_expiring_today_can_be_quoted(client, monkeypatch):
+-    from atlas.api import routes
+-    from atlas.db.pool import conn
+-
+-    with conn() as c:
+-        row = c.execute("select policy_number, expiry_date from policies where status='active' order by expiry_date limit 1").fetchone()
+-    monkeypatch.setattr(routes, "_today", lambda: row["expiry_date"])
+-    assert client.post(f"/api/policies/{row['policy_number']}/quote").status_code == 200
+-
+-
+ def test_slow_requests_emit_a_performance_event(client, captured_errors, monkeypatch):
+     import time
+ 
+diff --git a/tests/test_renewals.py b/tests/test_renewals.py
+index d79c2c6..3071c28 100644
+--- a/tests/test_renewals.py
++++ b/tests/test_renewals.py
+@@ -28,18 +28,3 @@ def test_business_today_uses_business_timezone():
+     now = datetime(2026, 9, 30, 15, 30, tzinfo=UTC)
+     assert business_today(now, "Australia/Sydney") == date(2026, 10, 1)
+     assert business_today(now, "UTC") == date(2026, 9, 30)
+-
+-
+-def test_late_evening_sydney_renewal_is_not_pulled_a_day_early(policy):
+-    # At 23:30 Sydney time on 1 Sep, a policy expiring 1 Oct is exactly 30 days out and due.
+-    now = datetime(2026, 9, 1, 13, 30, tzinfo=UTC)  # 23:30 AEST
+-    today = business_today(now, "Australia/Sydney")
+-    assert today == date(2026, 9, 1)
+-    assert is_due(replace(policy, expiry_date=date(2026, 10, 1)), today, 30)
+-
+-
+-def test_policy_is_in_force_on_its_expiry_date(policy):
+-    from atlas.domain.renewals import has_expired
+-
+-    assert not has_expired(replace(policy, expiry_date=date(2026, 9, 13)), date(2026, 9, 13))
+-    assert has_expired(replace(policy, expiry_date=date(2026, 9, 12)), date(2026, 9, 13))

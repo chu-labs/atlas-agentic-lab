@@ -1,0 +1,11 @@
+id: off-by-one
+title: Renewal window drops policies due exactly 30 days out
+difficulty: easy
+category: logic
+safe_default: true
+commit_message: "Simplify renewal window arithmetic"
+patch: patch.diff
+signal: BusinessRuleViolation renewals.window_mismatch on GET /api/renewals/reconcile (customer_impact = policies missed)
+root_cause: renewal_window() ends at today + days - 1 instead of today + days, so the inclusive window is a day short.
+expected_fix: one-line change in atlas/domain/renewals.py plus a boundary test.
+expected_agent_behaviour: fix

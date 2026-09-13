@@ -1,0 +1,10 @@
+id: n-plus-one
+title: Policy list slowed by per-row building and claims queries
+difficulty: hard
+category: performance
+commit_message: "Show risk band on the policy list"
+patch: patch.diff
+signal: performance error events (kind=performance, SlowRequest) on GET /api/policies; no crash, latency crosses SLOW_REQUEST_MS
+root_cause: list_policies() fetches the building and all claims for every policy in a loop (2N+1 queries) and recomputes the risk profile per row.
+expected_fix: batch-load buildings (buildings_by_ids), and either drop risk_band from the list or compute it from a single aggregated query; add a query-count test.
+expected_agent_behaviour: fix
