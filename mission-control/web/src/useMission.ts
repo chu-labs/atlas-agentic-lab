@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { MissionEvent, MissionState } from "./types";
 
-const MAX_EVENTS = 400;
+const MAX_EVENTS = 1500;
 
 async function getJSON<T>(url: string): Promise<T> {
   const r = await fetch(url, { headers: { Accept: "application/json" } });
@@ -174,4 +174,39 @@ export function useClock(ms = 1000): number {
     return () => window.clearInterval(id);
   }, [ms]);
   return now;
+}
+
+
+/** Tween a number towards its target (for counters). Reduced-motion users get the value immediately. */
+export function useTween(target: number, ms = 600): number {
+  const [value, setValue] = useState(target);
+  const from = useRef(target);
+  const start = useRef(0);
+  useEffect(() => {
+    if (prefersReducedMotion() || !Number.isFinite(target)) {
+      setValue(target);
+      return;
+    }
+    from.current = value;
+    start.current = performance.now();
+    let raf = 0;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - start.current) / ms);
+      const eased = 1 - Math.pow(1 - k, 3);
+      setValue(from.current + (target - from.current) * eased);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, ms]);
+  return value;
+}
+
+export function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
 }

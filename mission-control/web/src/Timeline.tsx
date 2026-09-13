@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
-import type { MissionEvent, PipelineRow } from "./types";
+import type { MissionEvent, PipelineRow, Selection } from "./types";
+import { belongsTo, stageOf } from "./attribution";
 import { hms, mmss, secondsBetween } from "./time";
 
 const COLORS: Record<string, string> = {
@@ -94,7 +95,21 @@ function ErrorText({ e }: { e: MissionEvent }) {
   );
 }
 
-export function Timeline({ events, activeRow }: { events: MissionEvent[]; activeRow: PipelineRow | null }) {
+export function Timeline({
+  events,
+  activeRow,
+  rows,
+  onSelect,
+}: {
+  events: MissionEvent[];
+  activeRow: PipelineRow | null;
+  rows: PipelineRow[];
+  onSelect: (s: Selection) => void;
+}) {
+  const open = (e: MissionEvent) => {
+    const row = rows.find((r) => belongsTo(e, r));
+    if (row?.ticket) onSelect({ kind: "stage", ticket: row.ticket, stage: stageOf(e, row) });
+  };
   const listRef = useRef<HTMLDivElement>(null);
   const groups = useMemo(() => groupEvents(events), [events]);
   useEffect(() => {
@@ -114,7 +129,11 @@ export function Timeline({ events, activeRow }: { events: MissionEvent[]; active
           const rel = origin ? secondsBetween(origin, e.ts) : null;
           const isError = e.detail_type === "error.raised";
           return (
-            <div key={e.id} className={`row ${w.human ? "row-human" : ""} kind-${e.detail_type.replace(".", "-")}`}>
+            <div
+              key={e.id}
+              className={`row ${w.human ? "row-human" : ""} kind-${e.detail_type.replace(".", "-")} ${rows.some((r) => belongsTo(e, r)) ? "row-click" : ""}`}
+              onClick={() => open(e)}
+            >
               <span className="row-time">{hms(e.ts)}</span>
               <span className="row-rel">{rel != null && rel >= 0 ? `+${mmss(rel)}` : ""}</span>
               <span className="row-avatar" style={{ background: w.color }}>

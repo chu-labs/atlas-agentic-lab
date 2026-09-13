@@ -11,7 +11,22 @@ DEFAULT_BASELINES = {
     "human_days_error_to_pr": 3.5,
     "human_days_error_to_closed": 9,
     "human_hourly_rate_aud": 185,
-    "notes": "placeholder until supplied",
+    # Engineering hours a traditional team would book on the same fix (drives the cost comparison).
+    "human_engineering_hours": 13,
+    # Traditional SDLC calendar days per stage; the "then" lane of Then vs now.
+    "stage_days": {
+        "detect": 1.5,
+        "triage": 1,
+        "ticket": 0.5,
+        "code": 2,
+        "test": 1,
+        "pr": 0.5,
+        "review": 1.5,
+        "gate": 2,
+        "deploy": 1,
+        "verify": 0.5,
+    },
+    "notes": "illustrative until supplied",
 }
 
 
@@ -73,12 +88,16 @@ class Settings(BaseSettings):
 
     @property
     def baselines(self) -> dict:
-        out = dict(DEFAULT_BASELINES)
+        out = {**DEFAULT_BASELINES, "stage_days": dict(DEFAULT_BASELINES["stage_days"])}
         if self.human_baselines_json:
             try:
-                out.update(json.loads(self.human_baselines_json))
+                override = json.loads(self.human_baselines_json)
             except ValueError:
-                pass
+                override = {}
+            stage_days = override.pop("stage_days", None)
+            out.update(override)
+            if isinstance(stage_days, dict):
+                out["stage_days"].update(stage_days)
         return out
 
     def queue_urls(self) -> dict[str, str]:

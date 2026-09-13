@@ -24,6 +24,24 @@ PR = {
     "branch": "forge/ATLAS-142-null-customer-on-invoice",
     "title": "Fix ATLAS-142: guard against invoices with no customer",
 }
+PR_BODY = """## Why
+Archived customers are returned as `None` by `CustomerRepo.get()`; `create_invoice` dereferenced the result.
+
+## What
+- `tests/test_invoices.py::test_archived_customer_is_rejected` — **fails first**, then passes
+- `app/invoices.py`: return `409 Conflict` with a clear message instead of a 500
+
+## Scope
+No schema changes, no business-rule changes, 2 files, +31 −4. Ticket: ATLAS-142.
+"""
+REVIEW_BODY = """**Verdict: no blocking concerns.** It is the human's call now; I cannot approve.
+
+- Test reproduces the production error before the fix (confirmed by running it against `main`)
+- Scope is tight: only the archived-customer path changes
+- No schema, migration or business-rule change; no new dependencies
+- Error handling returns 409 with a message the client can act on
+
+Minor: consider logging the customer id at `warning` level. Not blocking."""
 AUTH = {
     "scout": {"can_create_tickets": True, "can_write_code": False, "can_review": False, "can_merge": False, "can_deploy": False, "can_change_business_rules": False},
     "forge": {"can_write_code": True, "can_open_pull_requests": True, "can_review": False, "can_merge": False, "can_deploy": False, "can_change_business_rules": False},
@@ -89,12 +107,12 @@ TO_GATE: list[tuple[float, dict]] = [
     (5.0, status("forge", "working", "Running pytest tests/test_invoices.py -q … 1 failed as expected.", TICKET, telemetry=tel(41000, 3900, 11, 150, 0.28))),
     (6.0, status("forge", "working", "Fix: return 409 with a clear message when the customer is archived. No business rule changes.", TICKET, telemetry=tel(55000, 5600, 14, 200, 0.38))),
     (5.0, status("forge", "working", "Running pytest -q … 84 passed.", TICKET, telemetry=tel(62000, 6100, 16, 230, 0.42))),
-    (4.0, event("atlas.forge", "pr.opened", agent("forge"), TICKET, "Opened PR #17 after 4.2 min: failing test first, then the fix", pr=PR, telemetry=tel(68000, 7000, 18, 250, 0.47))),
+    (4.0, event("atlas.forge", "pr.opened", agent("forge"), TICKET, "Opened PR #17 after 4.2 min: failing test first, then the fix", pr=PR, body=PR_BODY, telemetry=tel(68000, 7000, 18, 250, 0.47))),
     (1.0, status("forge", "waiting_on_review", "PR #17 open. Waiting for Sentinel. I cannot merge this.", TICKET, telemetry=tel(68000, 7000, 18, 250, 0.47))),
     (3.0, status("sentinel", "working", "Reviewing PR #17: diff is 2 files, +31 −4. Checking the test actually fails without the fix.", TICKET)),
     (6.0, status("sentinel", "working", "Test is real, scope is tight, no schema or business-rule changes. Checking error handling on the archived path.", TICKET, telemetry=tel(15000, 1200, 4, 40, 0.09))),
     (5.0, event("atlas.sentinel", "review.posted", agent("sentinel"), TICKET, "Sentinel reviewed PR #17: no blocking concerns. Now waiting on a human.",
-                pr=PR, verdict="comment", telemetry=tel(19000, 1600, 5, 55, 0.11))),
+                pr=PR, verdict="comment", body=REVIEW_BODY, telemetry=tel(19000, 1600, 5, 55, 0.11))),
     (1.0, status("sentinel", "idle", "PR #17 reviewed. It is the human's call now; I cannot approve.", TICKET, telemetry=tel(19000, 1600, 5, 55, 0.11))),
 ]
 

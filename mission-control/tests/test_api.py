@@ -28,8 +28,11 @@ def test_inject_walks_pipeline_and_persists(client):
     for expected, raw in SCRIPT[:9]:
         r = client.post("/api/admin/inject", json=raw)
         assert r.status_code == 201, r.text
-        row = client.get("/api/state").json()["pipeline"][0]
-        assert row["stage"] == expected
+        state = client.get("/api/state").json()
+        if expected in {"error", "triage"}:
+            assert state["pipeline"] == [] and state["signal"]["untracked_count"] >= 1
+            continue
+        assert state["pipeline"][0]["stage"] == expected
     state = client.get("/api/state").json()
     assert state["gate"]["waiting"] is True and state["active_ticket"] == "ATLAS-142"
     # the dashboard emitted human.gate_waiting into its own timeline (no bus configured)

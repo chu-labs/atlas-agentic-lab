@@ -27,7 +27,7 @@ def get_state():
     s = settings()
     return {
         **hub().snapshot(),
-        "links": {"board": s.board_url, "platform": s.platform_url},
+        "links": {"board": s.board_url, "platform": s.platform_url, "github": f"https://github.com/{s.github_org}/{s.github_repo}"},
         "human": {"login": s.github_human_login, "display_name": s.github_human_display_name, "configured": bool(s.github_human_token)},
     }
 

@@ -1,4 +1,4 @@
-import type { AgentStatus, FleetCard } from "./types";
+import type { AgentStatus, FleetCard, Selection } from "./types";
 
 const CHIPS: [string, string][] = [
   ["can_write_code", "code"],
@@ -17,13 +17,20 @@ const STATUS_LABEL: Record<AgentStatus, string> = {
   escalated: "escalated",
 };
 
-export function Fleet({ fleet }: { fleet: FleetCard[] }) {
+export function Fleet({ fleet, onSelect, selected }: { fleet: FleetCard[]; onSelect: (s: Selection) => void; selected: Selection | null }) {
   return (
     <section className="fleet">
-      <h2 className="panel-title">Fleet</h2>
+      <h2 className="panel-title">
+        Fleet <span className="panel-sub">click an agent for its reasoning</span>
+      </h2>
       <div className="fleet-cards">
         {fleet.map((c) => (
-          <article key={c.handle} className={`card status-${c.status} ${c.kind === "teammate" ? "card-teammate" : ""}`} style={{ ["--agent" as string]: c.color }}>
+          <button
+            key={c.handle}
+            className={`card status-${c.status} ${c.kind === "teammate" ? "card-teammate" : ""} ${selected?.kind === "agent" && selected.handle === c.handle ? "selected" : ""}`}
+            style={{ ["--agent" as string]: c.color }}
+            onClick={() => onSelect({ kind: "agent", handle: c.handle })}
+          >
             <div className="card-head">
               <span className="avatar" style={{ background: c.color }}>
                 {c.avatar}
@@ -40,11 +47,6 @@ export function Fleet({ fleet }: { fleet: FleetCard[] }) {
                 </div>
               </div>
             </div>
-            <div className="thinking-wrap">
-              <p key={c.thinking} className="thinking">
-                {c.thinking || <span className="muted">—</span>}
-              </p>
-            </div>
             <div className="chips">
               {CHIPS.map(([k, label]) => {
                 const on = c.authority?.[k] === true;
@@ -55,7 +57,12 @@ export function Fleet({ fleet }: { fleet: FleetCard[] }) {
                 );
               })}
             </div>
-          </article>
+            <div className="thinking-wrap">
+              <p key={c.thinking} className="thinking">
+                {c.thinking || <span className="muted">—</span>}
+              </p>
+            </div>
+          </button>
         ))}
       </div>
     </section>

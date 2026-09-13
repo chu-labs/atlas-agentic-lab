@@ -67,10 +67,62 @@ export interface PipelineRow {
   escalation: { summary?: string; category?: string; to?: string } | null;
   verify_failed: boolean;
   pr: PR | null;
-  error: { signature?: string; endpoint?: string; count: number } | null;
+  error: {
+    signature?: string | null;
+    endpoint?: string | null;
+    error_type?: string | null;
+    message?: string | null;
+    count: number;
+    first_seen?: string | null;
+    last_seen?: string | null;
+  } | null;
+  signature: string | null;
   first_ts: string;
   updated_ts: string;
+  closed_ts: string | null;
   closed: boolean;
+  durations: Durations;
+}
+
+export type Segment = "triage" | "code" | "review" | "gate" | "deploy" | "verify";
+export const SEGMENTS: Segment[] = ["triage", "code", "review", "gate", "deploy", "verify"];
+export const SEGMENT_LABEL: Record<Segment, string> = {
+  triage: "Triage",
+  code: "Code",
+  review: "Review",
+  gate: "Gate",
+  deploy: "Deploy",
+  verify: "Verify",
+};
+
+export interface Durations {
+  segments: Partial<Record<Segment, number>>;
+  open_segment: Segment | null;
+  total: number;
+  human: number;
+  machine: number;
+  frozen: boolean;
+}
+
+export interface Signal {
+  rate: number[];
+  bucket_seconds: number;
+  total_10m: number;
+  per_minute: number;
+  untracked_count: number;
+  untracked_signatures: number;
+  latest: {
+    signature: string | null;
+    count: number;
+    first_ts: string;
+    last_ts: string;
+    message?: string | null;
+    endpoint?: string | null;
+    error_type?: string | null;
+    status_code?: number | null;
+    method?: string | null;
+  } | null;
+  triage_since: string | null;
 }
 
 export interface Gate {
@@ -100,6 +152,8 @@ export interface Baselines {
   human_days_error_to_pr: number;
   human_days_error_to_closed: number;
   human_hourly_rate_aud: number;
+  human_engineering_hours: number;
+  stage_days: Record<string, number>;
   notes?: string;
 }
 
@@ -111,11 +165,15 @@ export interface MissionState {
   gate: Gate;
   telemetry: Telemetry;
   queues: Record<string, number>;
+  signal: Signal;
   baselines: Baselines;
   replaying: boolean;
   last_event_id: number;
   human?: { login: string; display_name: string; configured: boolean };
+  links?: { board?: string; platform?: string; github?: string };
 }
+
+export type Selection = { kind: "stage"; ticket: string; stage: Stage } | { kind: "agent"; handle: string };
 
 export interface MissionEvent {
   id: number;

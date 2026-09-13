@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 import threading
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from .fleet import FLEET, TEAMMATE_AVATARS
@@ -16,14 +16,19 @@ from .fleet import FLEET, TEAMMATE_AVATARS
 STAGES = ["error", "triage", "ticket", "code", "test", "pr", "human_gate", "merge", "deploy", "verify", "closed"]
 ORDER = {s: i for i, s in enumerate(STAGES)}
 TELEMETRY_FIELDS = ("tokens_in", "tokens_out", "model_calls", "seconds", "usd")
-PENDING = "__pending__"  # prefix of pipeline rows for errors no ticket has claimed yet (one per signature)
-
-
 TICKET_KEY = re.compile(r"^[A-Z][A-Z0-9]*-\d+$")
-
-
-def is_pending(key: str) -> bool:
-    return key.startswith(PENDING)
+SIGNAL_WINDOW = timedelta(minutes=10)
+SIGNAL_BUCKET = 30  # seconds per sparkline bucket
+# Duration segments shown under each ticket row: (name, start stage, end stage). Triage starts at the first error.
+SEGMENTS = [
+    ("triage", "error", "ticket"),
+    ("code", "code", "pr"),
+    ("review", "pr", "human_gate"),
+    ("gate", "human_gate", "merge"),
+    ("deploy", "merge", "deploy"),
+    ("verify", "deploy", "closed"),
+]
+HUMAN_SEGMENTS = {"gate"}
 
 
 def is_ticket_key(value: Any) -> bool:
@@ -104,7 +109,10 @@ class State:
     def reset(self) -> None:
         with self.lock:
             self.fleet: dict[str, dict] = {d["handle"]: _fleet_card(d) for d in FLEET}
-            self.rows: dict[str, dict] = {}  # ticket -> pipeline row (plus PENDING)
+            self.rows: dict[str, dict] = {}  # ticket -> pipeline row. Tickets only; errors live in the signal.
+            self.errors: list[dict] = []  # every error.raised in the last SIGNAL_WINDOW (for the rate sparkline)
+            self.untracked: dict[str, dict] = {}  # signature -> bucket of errors no open ticket has claimed
+            self.triage_since: datetime | None = None  # Scout started working before a ticket existed
             self.gate: dict = {"waiting": False, "pr": None, "ticket": None, "since": None}
             self.gate_notified: set[int] = set()
             self.telemetry: dict[str, dict] = {}  # ticket -> {"agents": {handle: {...}}}
@@ -134,67 +142,87 @@ class State:
                 "signature": signature,
             }
             self.rows[ticket] = row
-            self._attach_pending(row, signature)
+            self._attach_untracked(row, signature)
         elif signature and not row.get("signature"):
             row["signature"] = signature
-            self._attach_pending(row, signature)
+            self._attach_untracked(row, signature)
         if title and not row["title"]:
             row["title"] = title
         return row
 
-    def _pending_rows(self) -> list[dict]:
-        return [r for k, r in self.rows.items() if is_pending(k)]
-
     def _open_ticket_rows(self) -> list[dict]:
-        return [r for k, r in self.rows.items() if not is_pending(k) and r["stage"] != "closed"]
+        return [r for r in self.rows.values() if r["stage"] != "closed"]
 
     @staticmethod
     def _row_signature(row: dict) -> str | None:
         return row.get("signature") or (row.get("error") or {}).get("signature")
 
-    def _attach_pending(self, row: dict, signature: str | None) -> None:
-        """Fold every unattached error row with this signature into the ticket row.
+    def _attach_untracked(self, row: dict, signature: str | None) -> None:
+        """Fold the untracked errors with this signature into the ticket row: count, first seen, triage start.
 
         With no signature to match on, or when nothing matched and this is the only open ticket,
-        every pending row is taken: the errors that started all this belong to this ticket. A
-        pending row is never left behind a lone ticket.
+        every untracked bucket is taken: the errors that started all this belong to this ticket.
         """
-        keys = [k for k, r in self.rows.items() if is_pending(k) and (signature is None or r["error"]["signature"] == signature)]
+        keys = [k for k, b in self.untracked.items() if signature is None or b["signature"] == signature]
         if not keys and len(self._open_ticket_rows()) == 1:
-            keys = [k for k in self.rows if is_pending(k)]
+            keys = list(self.untracked)
         if not keys:
             return
-        taken = [self.rows.pop(k) for k in keys]
-        for p in taken:
-            for stage, ts in p["stages"].items():
-                if stage not in row["stages"] or ts < row["stages"][stage]:
-                    row["stages"][stage] = ts
-            row["first_ts"] = min(row["first_ts"], p["first_ts"])
-        first = min(taken, key=lambda p: p["first_ts"])
-        count = sum(p["error"]["count"] for p in taken) + (row.get("error") or {}).get("count", 0)
-        row["error"] = {**first["error"], "signature": self._row_signature(row) or first["error"]["signature"], "count": count}
+        taken = [self.untracked.pop(k) for k in keys]
+        first = min(taken, key=lambda b: b["first_ts"])
+        count = sum(b["count"] for b in taken) + (row.get("error") or {}).get("count", 0)
+        row["error"] = {
+            "signature": self._row_signature(row) or first["signature"],
+            "endpoint": first.get("endpoint"),
+            "error_type": first.get("error_type"),
+            "message": first.get("message"),
+            "count": count,
+            "first_seen": first["first_ts"],
+        }
         row.setdefault("signature", row["error"]["signature"])
+        if "error" not in row["stages"] or first["first_ts"] < row["stages"]["error"]:
+            row["stages"]["error"] = first["first_ts"]
+        row["first_ts"] = min(row["first_ts"], first["first_ts"])
+        if self.triage_since and self.triage_since >= row["first_ts"]:
+            row["stages"]["triage"] = min(self.triage_since, row["stages"].get("triage") or self.triage_since)
+        self.triage_since = None
 
     def _absorb_orphans(self) -> None:
-        """Any pending row whose signature now belongs to an open ticket is folded into that ticket."""
-        for key in [k for k in self.rows if is_pending(k)]:
-            pending = self.rows.get(key)
-            if not pending:
+        """Any untracked bucket whose signature now belongs to an open ticket is folded into that ticket."""
+        for key in list(self.untracked):
+            bucket = self.untracked.get(key)
+            if not bucket:
                 continue
-            sig = pending["error"]["signature"]
-            owner = next((r for r in self._open_ticket_rows() if self._row_signature(r) == sig), None)
+            owner = next((r for r in self._open_ticket_rows() if self._row_signature(r) == bucket["signature"]), None)
             if owner is not None:
-                self._attach_pending(owner, sig)
+                self._attach_untracked(owner, bucket["signature"])
 
     def _count_error(self, row: dict, d: dict, ts: datetime, sig: str | None) -> None:
-        """One more error.raised on a row that already exists (ticketed or pending)."""
+        """One more error.raised on a ticket that already owns this signature."""
         if not row.get("error"):
-            row["error"] = {"signature": sig, "endpoint": d.get("endpoint"), "count": 0}
+            row["error"] = {"signature": sig, "endpoint": d.get("endpoint"), "error_type": d.get("error_type"),
+                            "message": d.get("message"), "count": 0, "first_seen": ts}
         row["error"]["count"] += 1
+        row["error"]["last_seen"] = max(row["error"].get("last_seen") or ts, ts)
+        if ts < row["error"]["first_seen"]:
+            row["error"]["first_seen"] = ts
         if "error" not in row["stages"] or ts < row["stages"]["error"]:
             row["stages"]["error"] = ts
         row["first_ts"] = min(row["first_ts"], ts)
         row["updated_ts"] = max(row["updated_ts"], ts)
+
+    def _record_error(self, d: dict, ts: datetime, sig: str | None) -> None:
+        self.errors.append({"ts": ts, "signature": sig, "message": d.get("message"), "endpoint": d.get("endpoint"),
+                            "error_type": d.get("error_type"), "status_code": d.get("status_code"), "method": d.get("method")})
+        cutoff = ts - SIGNAL_WINDOW
+        if len(self.errors) > 5000 or (self.errors and self.errors[0]["ts"] < cutoff - SIGNAL_WINDOW):
+            self.errors = [x for x in self.errors if x["ts"] >= cutoff]
+
+    def _prune_signal(self, now: datetime) -> None:
+        cutoff = now - SIGNAL_WINDOW
+        self.errors = [x for x in self.errors if x["ts"] >= cutoff]
+        for k in [k for k, b in self.untracked.items() if b["last_ts"] < cutoff - SIGNAL_WINDOW]:
+            self.untracked.pop(k, None)
 
     @staticmethod
     def _enter(row: dict, stage: str, ts: datetime, *, back: bool = False) -> None:
@@ -213,9 +241,7 @@ class State:
                 if row.get("pr") and row["pr"].get("number") == pr:
                     return row["ticket"]
         if e["detail_type"] in {"deploy.completed", "pr.merged", "verify.passed", "verify.failed", "ticket.closed"}:
-            candidates = [
-                r for k, r in self.rows.items() if not is_pending(k) and r["stage"] != "closed" and ORDER[r["stage"]] >= ORDER["pr"]
-            ]
+            candidates = [r for r in self._open_ticket_rows() if ORDER[r["stage"]] >= ORDER["pr"]]
             if candidates:
                 return max(candidates, key=lambda r: r["updated_ts"])["ticket"]
         return None
@@ -242,28 +268,26 @@ class State:
             # --- pipeline ------------------------------------------------
             if kind == "error.raised":
                 sig = error_signature(d)
+                self._record_error(d, ts, sig)
                 row = next((r for r in self._open_ticket_rows() if self._row_signature(r) == sig), None)
-                if row is None:
-                    row = self.rows.get(f"{PENDING}{sig or ''}")
-                if row is None:
-                    self.rows[f"{PENDING}{sig or ''}"] = row = {
-                        "ticket": None,
-                        "title": d.get("message") or d.get("error_type") or "Production error",
-                        "stage": "error",
-                        "stages": {},
-                        "escalated": False,
-                        "verify_failed": False,
-                        "pr": None,
-                        "first_ts": ts,
-                        "updated_ts": ts,
-                        "error": None,
-                    }
-                self._count_error(row, d, ts, sig)
+                if row is not None:
+                    self._count_error(row, d, ts, sig)
+                else:
+                    bucket = self.untracked.get(sig or "")
+                    if bucket is None:
+                        self.untracked[sig or ""] = bucket = {
+                            "signature": sig, "count": 0, "first_ts": ts, "last_ts": ts,
+                            "message": d.get("message"), "endpoint": d.get("endpoint"), "error_type": d.get("error_type"),
+                            "status_code": d.get("status_code"), "method": d.get("method"),
+                        }
+                    bucket["count"] += 1
+                    bucket["first_ts"] = min(bucket["first_ts"], ts)
+                    if ts >= bucket["last_ts"]:
+                        bucket.update(last_ts=ts, message=d.get("message") or bucket["message"])
                 self._absorb_orphans()
             elif src == "atlas.scout" and kind == "agent.status" and d.get("status") == "working" and not ticket:
-                for row in self._pending_rows():
-                    self._enter(row, "triage", ts)
-                    row["updated_ts"] = ts
+                if self.untracked and self.triage_since is None:
+                    self.triage_since = ts
                 self._absorb_orphans()
             elif kind in {"incident.opened", "issue.created"} and ticket:
                 issue = d.get("issue") or {}
@@ -414,7 +438,7 @@ class State:
 
     def active_ticket(self) -> str | None:
         with self.lock:
-            open_rows = [r for k, r in self.rows.items() if not is_pending(k) and r["stage"] != "closed"]
+            open_rows = self._open_ticket_rows()
             if not open_rows:
                 return None
             return max(open_rows, key=lambda r: r["updated_ts"])["ticket"]
@@ -441,12 +465,63 @@ class State:
                 out["closed"] = row["closed_ts"] is not None
             return out
 
+    @staticmethod
+    def durations(row: dict, now: datetime) -> dict:
+        """Per-segment seconds under the chain. The running segment is measured to `now`.
+
+        Human time is the gate; everything else is machine time. Escalated tickets freeze at
+        their last event; closed ones at close.
+        """
+        st = row["stages"]
+        frozen = row["closed_ts"] or (row["updated_ts"] if row["escalated"] else None)
+        end_of_world = frozen or now
+        first_error = st.get("error") or row["first_ts"]
+        out: dict = {"segments": {}, "open_segment": None}
+        for name, start_key, end_key in SEGMENTS:
+            start = first_error if start_key == "error" else st.get(start_key)
+            if start is None:
+                continue
+            end = st.get(end_key)
+            if end is None:
+                if out["open_segment"] is None and frozen is None and row["stage"] != "closed":
+                    out["open_segment"] = name
+                end = end_of_world
+            out["segments"][name] = max(0.0, (end - start).total_seconds())
+        total = max(0.0, (end_of_world - first_error).total_seconds())
+        human = sum(v for k, v in out["segments"].items() if k in HUMAN_SEGMENTS)
+        out.update(total=total, human=human, machine=max(0.0, total - human), frozen=frozen is not None)
+        return out
+
+    def signal(self, now: datetime) -> dict:
+        """The production signal strip: error rate over the last 10 minutes, untracked errors, latest one."""
+        with self.lock:
+            self._prune_signal(now)
+            n = int(SIGNAL_WINDOW.total_seconds() // SIGNAL_BUCKET)
+            buckets = [0] * n
+            for x in self.errors:
+                i = int((now - x["ts"]).total_seconds() // SIGNAL_BUCKET)
+                if 0 <= i < n:
+                    buckets[n - 1 - i] += 1
+            latest = max(self.untracked.values(), key=lambda b: b["last_ts"], default=None)
+            last_minute = sum(1 for x in self.errors if (now - x["ts"]).total_seconds() < 60)
+            return {
+                "rate": buckets,
+                "bucket_seconds": SIGNAL_BUCKET,
+                "total_10m": len(self.errors),
+                "per_minute": last_minute,
+                "untracked_count": sum(b["count"] for b in self.untracked.values()),
+                "untracked_signatures": len(self.untracked),
+                "latest": {**latest, "first_ts": iso(latest["first_ts"]), "last_ts": iso(latest["last_ts"])} if latest else None,
+                "triage_since": iso(self.triage_since),
+            }
+
     def snapshot(self, baselines: dict | None = None, now: datetime | None = None) -> dict:
         now = now or datetime.now(UTC)
         with self.lock:
-            rows = sorted(self.rows.values(), key=lambda r: r["updated_ts"], reverse=True)
+            rows = sorted(self.rows.values(), key=lambda r: r["updated_ts"], reverse=True)[:12]
             pipeline = []
             for r in rows:
+                err = r.get("error")
                 pipeline.append(
                     {
                         "ticket": r["ticket"],
@@ -457,10 +532,13 @@ class State:
                         "escalation": r.get("escalation"),
                         "verify_failed": r["verify_failed"],
                         "pr": r["pr"],
-                        "error": r.get("error"),
+                        "error": {**err, "first_seen": iso(err.get("first_seen")), "last_seen": iso(err.get("last_seen"))} if err else None,
+                        "signature": self._row_signature(r),
                         "first_ts": iso(r["first_ts"]),
                         "updated_ts": iso(r["updated_ts"]),
+                        "closed_ts": iso(r["closed_ts"]),
                         "closed": r["stage"] == "closed",
+                        "durations": self.durations(r, now),
                     }
                 )
             gate = dict(self.gate)
@@ -482,6 +560,7 @@ class State:
                 "gate": gate,
                 "telemetry": self.ticket_telemetry(active, now),
                 "queues": dict(self.queues),
+                "signal": self.signal(now),
                 "baselines": baselines or {},
                 "replaying": replaying,
                 "last_event_id": self.last_event_id,
