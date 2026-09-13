@@ -307,6 +307,20 @@ def record_play(name, speed):
     console.print(r.replay(name, speed))
 
 
+@record.command("video")
+@click.argument("name")
+@click.option("--speed", default=2.0, show_default=True, help="Replay speed while filming")
+@click.option("--out", default=None, help="Output .mp4 path (default recordings/<name>.mp4)")
+def record_video(name, speed, out):
+    """Render a saved recording to a standalone MP4 (local dashboard + headless browser)."""
+    from pathlib import Path
+
+    from . import record as r
+
+    path = r.video(name, Path(out) if out else None, speed=speed)
+    console.print(f"[green]wrote[/] {path}")
+
+
 @record.command("list")
 def record_list():
     from . import record as r

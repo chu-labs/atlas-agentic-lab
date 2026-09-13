@@ -22,6 +22,7 @@ class ReplayIn(BaseModel):
 class RecordingIn(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     since_event_id: int = 0
+    events: list[dict] | None = None  # upload a recording captured elsewhere (labctl record files)
 
 
 class InjectIn(BaseModel):

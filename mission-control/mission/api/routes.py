@@ -118,7 +118,19 @@ def list_recordings():
 
 @router.post("/recordings", status_code=201)
 def save_recording(body: RecordingIn):
+    if body.events is not None:
+        with conn() as c:
+            return repo.serialise_event(repo.save_recording(c, body.name, body.events))
     return hub().record(body.name, body.since_event_id)
+
+
+@router.get("/recordings/{name}")
+def get_recording(name: str):
+    with conn() as c:
+        rec = repo.get_recording(c, name)
+    if not rec:
+        raise HTTPException(404, f"no recording named {name}")
+    return repo.serialise_event(rec)
 
 
 @router.delete("/recordings/{name}")

@@ -113,3 +113,11 @@ def test_gate_without_token_is_503(client):
     assert r.status_code == 503 and "GITHUB_HUMAN_TOKEN" in r.json()["detail"]
     r = client.post("/api/gate/reject", json={"pr": 17, "reason": "nope"})
     assert r.status_code == 503
+
+
+def test_recording_upload_and_download(client):
+    events = [{"source": "atlas.scout", "detail-type": "agent.status", "time": "2026-09-13T04:00:00Z", "detail": {"summary": "hi", "actor": {"handle": "scout", "kind": "agent"}}}]
+    r = client.post("/api/recordings", json={"name": "up", "events": events})
+    assert r.status_code == 201
+    got = client.get("/api/recordings/up").json()
+    assert got["name"] == "up" and len(got["events"]) == 1
