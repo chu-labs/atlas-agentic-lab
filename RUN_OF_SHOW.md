@@ -25,13 +25,18 @@ run, fallback recording `clean-run` listed by `labctl record list`.
 ## Second beat, if time: the agent that says no (2 min)
 
 `labctl inject ambiguous-high-rise`. A human files "premiums over 20 floors look too high". Forge
-picks it up, reads the code, finds a deliberate 15% loading, and **refuses to change it**. It writes
-what it would need to know and reassigns to the product owner. Say: "The most important thing an
+picks it up, reads the code, finds a deliberate 15% loading, checks git history to confirm it is not a
+regression, notices the broker's own numbers match the loading, and **refuses to change it**. It writes
+three questions an underwriter would have to answer and reassigns to the product owner. Measured: 40
+seconds from pickup to escalation. Read its escalation comment aloud; it is the best-written thing in
+the demo. Say: "The most important thing an
 autonomous system can do is recognise a decision that is not its to make."
 
 ## Third beat, if time: the Workbench (6 min)
 
-Switch to the tmux window. `labctl workbench --ticket ATLAS-<n>` was run before the talk. In the main
+Before the talk: `labctl inject float-premium --workbench` (puts the defect on main with no deploy and
+files a human ticket, assigned to you, so the fleet leaves it alone), then `labctl workbench --ticket ATLAS-<n>`.
+Switch to the tmux window. In the main
 pane type: *Assemble a team for ATLAS-<n>: analyst, tester, builder, then reviewer. Converge and open
 one PR.* Four panes appear with four branches. Talk over them: the tester never sees the builder's code.
 When they finish, the main session merges the branches; if two agents solved it differently, that

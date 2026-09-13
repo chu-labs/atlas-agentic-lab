@@ -44,7 +44,9 @@ labctl inject off-by-one          # pushes the defect commit, builds, deploys (~
 labctl record save clean-run      # keeps the recording for the fallback
 labctl reset                      # back to clean in < 2 minutes
 ```
-Other defects: `labctl inject --list`. `ambiguous-high-rise` files a ticket instead of deploying code;
+Other defects: `labctl inject --list`. For the supervised beat: `labctl inject float-premium --workbench`
+lands the defect on main without deploying and files a human ticket assigned to you; the Workbench team
+fixes it and `open_pr` (an atlas-team tool) opens the PR as the GitHub App so your approval counts. `ambiguous-high-rise` files a ticket instead of deploying code;
 Forge should escalate, not fix. `zero-lots` also flips three buildings to zero lots (reset reseeds).
 
 ## 2a. Measured on 13 Sep 2026 (rehearsal 2, off-by-one)
