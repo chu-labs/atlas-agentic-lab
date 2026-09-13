@@ -82,6 +82,18 @@ class Settings(BaseSettings):
     image_tag: str = ""
     # The ops health poller (ECS/ALB/CloudWatch every 15 s). Off in tests.
     ops_poll: bool = True
+    # ALB identifiers from the task definition: the CloudWatch LoadBalancer dimension and, per service, the
+    # TargetGroup dimension ("svc=targetgroup/name/id,svc2=..."). Empty => discover by name (best effort).
+    alb_arn_suffix: str = ""
+    target_group_suffixes: str = ""
+
+    def target_groups(self) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for part in self.target_group_suffixes.split(","):
+            name, _, suffix = part.strip().partition("=")
+            if name and suffix:
+                out[name.strip()] = suffix.strip()
+        return out
 
     board_url: str = ""
     platform_url: str = ""

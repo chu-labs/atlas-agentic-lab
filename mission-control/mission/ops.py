@@ -30,7 +30,8 @@ def _boto_clients() -> dict:
     import boto3
 
     r = settings().aws_region
-    return {"ecs": boto3.client("ecs", region_name=r), "elbv2": boto3.client("elbv2", region_name=r), "cloudwatch": boto3.client("cloudwatch", region_name=r)}
+    return {"ecs": boto3.client("ecs", region_name=r), "elbv2": boto3.client("elbv2", region_name=r),
+            "cloudwatch": boto3.client("cloudwatch", region_name=r), "sts": boto3.client("sts", region_name=r)}
 
 
 clients: Callable[[], dict] = _boto_clients  # tests replace this
@@ -70,13 +71,47 @@ def _blank(name: str) -> dict:
             "deployment": None, "targets": None, "metrics": None}
 
 
-def _collect(c: dict, cluster: str, now: datetime) -> list[dict]:
-    ecs, elbv2, cw = c["ecs"], c["elbv2"], c["cloudwatch"]
-    svcs = {sv["serviceName"]: sv for sv in ecs.describe_services(cluster=cluster, services=SERVICES).get("services", [])}
-    tgs = elbv2.describe_target_groups().get("TargetGroups", [])
+def _resolve_alb(c: dict) -> tuple[str | None, dict[str, str], dict[str, str]]:
+    """(LoadBalancer dimension, {service: TargetGroup dimension}, {service: full target group ARN}).
+
+    Prefers ALB_ARN_SUFFIX / TARGET_GROUP_SUFFIXES from the task definition; falls back to discovery by name.
+    """
+    s = settings()
+    elbv2 = c["elbv2"]
+    lb_dim = s.alb_arn_suffix or None
+    tg_dims = s.target_groups()
+    tg_arns: dict[str, str] = {}
+    if lb_dim and tg_dims:
+        account = None
+        try:
+            account = c["sts"].get_caller_identity()["Account"]
+        except Exception:  # noqa: BLE001
+            account = None
+        if account:
+            tg_arns = {n: f"arn:aws:elasticloadbalancing:{s.aws_region}:{account}:{suffix}" for n, suffix in tg_dims.items()}
+        else:  # no STS: match the suffixes against the account's target groups
+            for tg in elbv2.describe_target_groups().get("TargetGroups", []):
+                for n, suffix in tg_dims.items():
+                    if tg["TargetGroupArn"].endswith(suffix):
+                        tg_arns[n] = tg["TargetGroupArn"]
+        return lb_dim, tg_dims, tg_arns
+    # discovery: the lab's load balancer and target groups named after the services
+    cluster = s.ecs_cluster or s.lab_name
     lbs = elbv2.describe_load_balancers().get("LoadBalancers", [])
     lb = next((x for x in lbs if cluster in x.get("LoadBalancerName", "")), lbs[0] if lbs else None)
     lb_dim = lb["LoadBalancerArn"].split("loadbalancer/", 1)[-1] if lb else None
+    for tg in elbv2.describe_target_groups().get("TargetGroups", []):
+        for n in SERVICES:
+            if n in tg.get("TargetGroupName", ""):
+                tg_arns[n] = tg["TargetGroupArn"]
+                tg_dims[n] = tg["TargetGroupArn"].split(":", 5)[-1]
+    return lb_dim, tg_dims, tg_arns
+
+
+def _collect(c: dict, cluster: str, now: datetime) -> list[dict]:
+    ecs, elbv2, cw = c["ecs"], c["elbv2"], c["cloudwatch"]
+    svcs = {sv["serviceName"]: sv for sv in ecs.describe_services(cluster=cluster, services=SERVICES).get("services", [])}
+    lb_dim, tg_dims, tg_arns = _resolve_alb(c)
     out = []
     for name in SERVICES:
         sv = svcs.get(name)
@@ -97,35 +132,38 @@ def _collect(c: dict, cluster: str, now: datetime) -> list[dict]:
                 deployment={"status": primary.get("status"), "rollout_state": primary.get("rolloutState"), "created_at": str(primary.get("createdAt")),
                             "updated_at": str(primary.get("updatedAt")), "in_progress": len(deps) > 1 or primary.get("rolloutState") == "IN_PROGRESS"} if primary else None,
             )
-        tg = next((t for t in tgs if name in t.get("TargetGroupName", "")), None)
-        if tg:
+        tg_arn = tg_arns.get(name)
+        if tg_arn:
             try:
-                th = elbv2.describe_target_health(TargetGroupArn=tg["TargetGroupArn"]).get("TargetHealthDescriptions", [])
+                th = elbv2.describe_target_health(TargetGroupArn=tg_arn).get("TargetHealthDescriptions", [])
                 states = [t.get("TargetHealth", {}).get("State") for t in th]
                 row["targets"] = {"healthy": states.count("healthy"), "unhealthy": sum(1 for x in states if x not in {"healthy", None}), "total": len(states), "states": states}
             except Exception:  # noqa: BLE001
+                log.warning("describe_target_health failed for %s", name, exc_info=True)
                 row["targets"] = None
-            if lb_dim:
-                tg_dim = tg["TargetGroupArn"].split(":", 5)[-1]
-                dims = [{"Name": "LoadBalancer", "Value": lb_dim}, {"Name": "TargetGroup", "Value": tg_dim}]
-                lb_only = [{"Name": "LoadBalancer", "Value": lb_dim}]
-                try:
-                    res = cw.get_metric_data(
-                        MetricDataQueries=[
-                            _q("RequestCount", "Sum", dims, "req"), _q("HTTPCode_Target_5XX_Count", "Sum", dims, "t5"),
-                            _q("HTTPCode_ELB_5XX_Count", "Sum", lb_only, "e5"), _q("TargetResponseTime", "p95", dims, "p95"),
-                            _q("UnHealthyHostCount", "Maximum", dims, "unh"),
-                        ],
-                        StartTime=now - timedelta(minutes=5), EndTime=now, ScanBy="TimestampDescending",
-                    )
-                    vals = {r["Id"]: r.get("Values") or [] for r in res.get("MetricDataResults", [])}
-                    row["metrics"] = {
-                        "request_count": sum(vals.get("req", [])), "target_5xx": sum(vals.get("t5", [])), "elb_5xx": sum(vals.get("e5", [])),
-                        "elb_5xx_last_min": (vals.get("e5") or [0])[0], "p95_ms": round(max(vals.get("p95") or [0]) * 1000),
-                        "unhealthy_hosts": max(vals.get("unh") or [0]), "window_minutes": 5,
-                    }
-                except Exception:  # noqa: BLE001
-                    row["metrics"] = None
+        tg_dim = tg_dims.get(name)
+        if lb_dim and tg_dim:
+            dims = [{"Name": "LoadBalancer", "Value": lb_dim}, {"Name": "TargetGroup", "Value": tg_dim}]
+            lb_only = [{"Name": "LoadBalancer", "Value": lb_dim}]
+            try:
+                res = cw.get_metric_data(
+                    MetricDataQueries=[
+                        _q("RequestCount", "Sum", dims, "req"), _q("HTTPCode_Target_5XX_Count", "Sum", dims, "t5"),
+                        _q("HTTPCode_ELB_5XX_Count", "Sum", lb_only, "e5"), _q("TargetResponseTime", "p95", dims, "p95"),
+                        _q("UnHealthyHostCount", "Maximum", dims, "unh"),
+                    ],
+                    StartTime=now - timedelta(minutes=5), EndTime=now, ScanBy="TimestampDescending",
+                )
+                vals = {r["Id"]: r.get("Values") or [] for r in res.get("MetricDataResults", [])}
+                row["metrics"] = {
+                    "request_count": sum(vals.get("req", [])), "target_5xx": sum(vals.get("t5", [])), "elb_5xx": sum(vals.get("e5", [])),
+                    "elb_5xx_last_min": (vals.get("e5") or [0])[0], "p95_ms": round(max(vals.get("p95") or [0]) * 1000),
+                    "unhealthy_hosts": max(vals.get("unh") or [0]), "window_minutes": 5,
+                    "dimensions": {"LoadBalancer": lb_dim, "TargetGroup": tg_dim},
+                }
+            except Exception:  # noqa: BLE001
+                log.warning("get_metric_data failed for %s", name, exc_info=True)
+                row["metrics"] = None
         out.append(row)
     return out
 

@@ -46,8 +46,41 @@ class FakeCW:
         return {"MetricDataResults": [{"Id": q["Id"], "Values": v[q["Id"]]} for q in MetricDataQueries]}
 
 
-def _fake(ecs=None, elb=None, cw=None):
-    return lambda: {"ecs": ecs or FakeECS(), "elbv2": elb or FakeELB(), "cloudwatch": cw or FakeCW()}
+class FakeSTS:
+    def get_caller_identity(self):
+        return {"Account": "336881700625"}
+
+
+class RecordingELB(FakeELB):
+    """Only answers describe_target_health; discovery calls must not happen when the env names the ALB."""
+
+    def __init__(self):
+        super().__init__()
+        self.health_arns: list[str] = []
+
+    def describe_target_groups(self):
+        raise AssertionError("discovery must not run when TARGET_GROUP_SUFFIXES is set")
+
+    def describe_load_balancers(self):
+        raise AssertionError("discovery must not run when ALB_ARN_SUFFIX is set")
+
+    def describe_target_health(self, TargetGroupArn):
+        self.health_arns.append(TargetGroupArn)
+        return super().describe_target_health(TargetGroupArn)
+
+
+class RecordingCW(FakeCW):
+    def __init__(self):
+        super().__init__()
+        self.queries: list[list[dict]] = []
+
+    def get_metric_data(self, MetricDataQueries, StartTime, EndTime, ScanBy):
+        self.queries.append(MetricDataQueries)
+        return super().get_metric_data(MetricDataQueries, StartTime, EndTime, ScanBy)
+
+
+def _fake(ecs=None, elb=None, cw=None, sts=None):
+    return lambda: {"ecs": ecs or FakeECS(), "elbv2": elb or FakeELB(), "cloudwatch": cw or FakeCW(), "sts": sts or FakeSTS()}
 
 
 def test_health_shaping_from_ecs_alb_cloudwatch(monkeypatch):
@@ -132,3 +165,35 @@ def test_signal_by_kind_and_cluster_table():
     table = {c["signature"]: c for c in st.clusters(now)}
     assert table["/a:KeyError"]["status"] == "ticketed" and table["/a:KeyError"]["ticket"] == "ATLAS-50"
     assert [c["status"] for c in st.clusters(now)][:1] == ["alerting"]
+
+
+def test_alb_identifiers_from_the_task_definition(monkeypatch):
+    from mission.settings import settings
+
+    monkeypatch.setattr(settings(), "alb_arn_suffix", "app/atlas-agentic-lab/956cc0833febdf0e")
+    monkeypatch.setattr(
+        settings(), "target_group_suffixes",
+        "atlas-board=targetgroup/atlas-lab-atlas-board/623ce1f08c2f1d26,"
+        "atlas-platform=targetgroup/atlas-lab-atlas-platform/aaa111,mission-control=targetgroup/atlas-lab-mission-control/bbb222",
+    )
+    elb, cw = RecordingELB(), RecordingCW()
+    monkeypatch.setattr(ops, "clients", _fake(elb=elb, cw=cw))
+    d = ops.fetch(force=True, now=datetime(2026, 9, 17, 10, 0, tzinfo=UTC))
+    assert d["source"] == "aws"
+    by = {s["name"]: s for s in d["services"]}
+    # full ARNs built from STS account + suffix, one DescribeTargetHealth per service
+    assert elb.health_arns == [
+        "arn:aws:elasticloadbalancing:ap-southeast-2:336881700625:targetgroup/atlas-lab-atlas-platform/aaa111",
+        "arn:aws:elasticloadbalancing:ap-southeast-2:336881700625:targetgroup/atlas-lab-atlas-board/623ce1f08c2f1d26",
+        "arn:aws:elasticloadbalancing:ap-southeast-2:336881700625:targetgroup/atlas-lab-mission-control/bbb222",
+    ]
+    assert by["atlas-board"]["targets"]["healthy"] == 1 and by["atlas-board"]["metrics"]["request_count"] == 568
+    # dimensions exactly as the env says: LoadBalancer + TargetGroup per service, LoadBalancer only for ELB 5xx
+    q = {x["Id"]: x["MetricStat"] for x in cw.queries[1]}  # atlas-board
+    assert q["req"]["Metric"]["Dimensions"] == [
+        {"Name": "LoadBalancer", "Value": "app/atlas-agentic-lab/956cc0833febdf0e"},
+        {"Name": "TargetGroup", "Value": "targetgroup/atlas-lab-atlas-board/623ce1f08c2f1d26"},
+    ]
+    assert q["e5"]["Metric"]["Dimensions"] == [{"Name": "LoadBalancer", "Value": "app/atlas-agentic-lab/956cc0833febdf0e"}]
+    assert q["p95"]["Stat"] == "p95" and q["unh"]["Stat"] == "Maximum" and q["req"]["Period"] == 60
+    assert by["mission-control"]["metrics"]["dimensions"]["TargetGroup"] == "targetgroup/atlas-lab-mission-control/bbb222"
