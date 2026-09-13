@@ -256,6 +256,14 @@ section, aside, .app > * { min-height: 0; min-width: 0; }
 .human-tag { background: var(--amber); color: #2a1f06; }
 .replay-tag { background: #2c1a4a; color: #d9b8ff; letter-spacing: 0.04em; font-weight: 600; }
 .kind-error-raised .row-summary { color: #ffb4b4; }
+.row-kind { font-family: var(--mono); font-size: 0.9rem; color: #ff8a8a; margin-right: 0.5rem; }
+.row-where { font-family: var(--mono); font-size: 0.9rem; color: var(--muted); margin-right: 0.5rem; }
+.row-sig { color: var(--dim); font-size: 0.9rem; }
+.count-tag {
+  display: inline-block; font-family: var(--mono); font-weight: 800; font-size: 0.95rem; padding: 0 0.45rem; border-radius: 0.35rem;
+  background: #2a1010; color: #ffb4b4; border: 1px solid #5a2020; margin-right: 0.5rem; vertical-align: 1px; font-variant-numeric: tabular-nums;
+}
+.kind-agent-status .count-tag { background: #1f2942; color: var(--muted); border-color: #2a3350; }
 .kind-escalation-raised .row-summary { color: #f5c6ff; font-weight: 700; }
 .kind-ticket-closed .row-summary, .kind-verify-passed .row-summary { color: #86efac; }
 

@@ -132,3 +132,98 @@ def test_incident_attaches_every_pending_row_with_its_signature():
                           incident={"signature": "sig-B", "count": 1}, issue={"key": "ATLAS-8", "title": "B"})))
     rows = {r["ticket"]: r for r in st.snapshot()["pipeline"]}
     assert set(rows) == {"ATLAS-7", "ATLAS-8"} and rows["ATLAS-8"]["error"]["count"] == 1
+
+
+SIG = "/api/renewals/reconcile:BusinessRuleViolation"
+
+
+def _err(sec: float, msg: str, **over) -> dict:
+    fields = dict(kind="business_rule", signature=SIG, endpoint="/api/renewals/reconcile", method="POST",
+                  error_type="BusinessRuleViolation", message=msg)
+    fields.update(over)
+    return ev("atlas.platform", "error.raised", sec, None, None, "422 on POST /api/renewals/reconcile", **fields)
+
+
+def _scout_triage(sec: float) -> list[dict]:
+    """What Scout really emits while triaging: status with no ticket, then LLM status/thinking on the 'triage' pseudo-ticket."""
+    return [
+        ev("atlas.scout", "agent.status", sec, agent("scout"), None, "Seen 3 business rule errors on POST /api/renewals/reconcile", status="working", thinking="assessing"),
+        ev("atlas.scout", "agent.status", sec + 1, agent("scout"), "triage", "Calling the model", status="working", thinking="Calling the model",
+           telemetry={"tokens_in": 900, "tokens_out": 100, "model_calls": 1, "seconds": 3, "usd": 0.01}),
+        ev("atlas.scout", "agent.thinking", sec + 2, agent("scout"), "triage", "Two runs disagree; this is one signature", thinking="Two runs disagree; this is one signature"),
+    ]
+
+
+def _incident(sec: float, ticket: str = "ATLAS-37", signature: str | None = SIG) -> dict:
+    return ev("atlas.scout", "incident.opened", sec, agent("scout"), ticket, f"Opened {ticket}: reconcile run drops policies",
+              incident={"signature": signature, "count": 3, "customer_impact": 11},
+              issue={"key": ticket, "title": "Reconcile run drops expiring policies", "priority": "High", "type": "Bug"})
+
+
+def _only_ticket_row(st: State, ticket: str) -> dict:
+    rows = st.snapshot()["pipeline"]
+    assert [r["ticket"] for r in rows] == [ticket], [(r["ticket"], r["stage"], r["title"]) for r in rows]
+    return rows[0]
+
+
+def test_varying_messages_before_and_after_incident_share_one_row():
+    st = State()
+    st.apply(normalise(_err(0, "2 active policies expiring on 2026-09-27 are missing from the 14-day run")))
+    st.apply(normalise(_err(1, "9 policies missing from 60-day run")))
+    for raw in _scout_triage(3):
+        st.apply(normalise(raw))
+    # the 'triage' pseudo-ticket must not become a pipeline row nor swallow the pending errors
+    assert [r["ticket"] for r in st.snapshot()["pipeline"]] == [None]
+    assert st.snapshot()["pipeline"][0]["stage"] == "triage"
+    st.apply(normalise(_err(4, "1 policy missing from 30-day run")))
+    st.apply(normalise(_incident(10)))
+    row = _only_ticket_row(st, "ATLAS-37")
+    assert row["error"]["count"] == 3 and row["stages"]["error"].startswith("2026-09-17T10:00:00")
+    assert row["stages"]["triage"].startswith("2026-09-17T10:00:03")
+    # more of the same signature after the ticket exists, with yet another message
+    st.apply(normalise(_err(12, "4 policies missing from 14-day run")))
+    st.apply(normalise(_err(13, "7 policies missing from 90-day run")))
+    row = _only_ticket_row(st, "ATLAS-37")
+    assert row["error"]["count"] == 5 and row["stage"] == "ticket"
+    # scout going back to work (no ticket) never resurrects an orphan
+    st.apply(normalise(ev("atlas.scout", "agent.status", 14, agent("scout"), None, "watching", status="working", thinking="watching")))
+    _only_ticket_row(st, "ATLAS-37")
+    # scout's triage telemetry landed on the real ticket, not on 'triage'
+    assert st.snapshot()["telemetry"]["tokens_in"] == 900
+    assert next(c for c in st.snapshot()["fleet"] if c["handle"] == "scout")["ticket"] == "ATLAS-37"
+
+
+def test_errors_arriving_after_incident_out_of_order_do_not_orphan():
+    """SQS standard queues reorder: the incident can land before the errors that caused it."""
+    st = State()
+    st.apply(normalise(_incident(10)))
+    st.apply(normalise(_err(0, "2 policies missing from the 14-day run")))
+    st.apply(normalise(_err(1, "9 policies missing from 60-day run")))
+    row = _only_ticket_row(st, "ATLAS-37")
+    assert row["error"]["count"] == 2 and row["first_ts"].startswith("2026-09-17T10:00:00")
+    assert row["stages"]["error"].startswith("2026-09-17T10:00:00") and row["stage"] == "ticket"
+    for raw in _scout_triage(11):
+        st.apply(normalise(raw))
+    _only_ticket_row(st, "ATLAS-37")
+
+
+def test_platform_without_signature_field_still_matches_scouts_fallback():
+    st = State()
+    st.apply(normalise(_err(0, "a", signature=None)))
+    st.apply(normalise(ev("atlas.scout", "agent.status", 1, agent("scout"), None, "triaging", status="working", thinking="x")))
+    st.apply(normalise(_err(2, "b", signature=None)))
+    st.apply(normalise(_incident(5)))  # scout computed endpoint:error_type == SIG
+    row = _only_ticket_row(st, "ATLAS-37")
+    assert row["error"]["count"] == 2 and row["stage"] == "ticket"
+    st.apply(normalise(_err(6, "c", signature=None)))
+    assert _only_ticket_row(st, "ATLAS-37")["error"]["count"] == 3
+
+
+def test_unmatched_pending_rows_are_absorbed_when_nothing_else_is_open():
+    """Signatures that cannot be matched must still not leave a stray NEW ERROR row behind a lone ticket."""
+    st = State()
+    st.apply(normalise(_err(0, "a", signature="something-else")))
+    st.apply(normalise(ev("atlas.scout", "agent.status", 1, agent("scout"), None, "triaging", status="working", thinking="x")))
+    st.apply(normalise(_incident(5)))
+    row = _only_ticket_row(st, "ATLAS-37")
+    assert row["error"]["count"] == 1 and row["stages"]["triage"].startswith("2026-09-17T10:00:01")

@@ -6,6 +6,7 @@ WebSocket fan-out and the bus; this module owns only the rules in docs/EVENTS.md
 """
 from __future__ import annotations
 
+import re
 import threading
 from datetime import UTC, datetime
 from typing import Any
@@ -18,8 +19,32 @@ TELEMETRY_FIELDS = ("tokens_in", "tokens_out", "model_calls", "seconds", "usd")
 PENDING = "__pending__"  # prefix of pipeline rows for errors no ticket has claimed yet (one per signature)
 
 
+TICKET_KEY = re.compile(r"^[A-Z][A-Z0-9]*-\d+$")
+
+
 def is_pending(key: str) -> bool:
     return key.startswith(PENDING)
+
+
+def is_ticket_key(value: Any) -> bool:
+    """Real board keys only. Agents also use pseudo-tickets such as Scout's "triage" for telemetry."""
+    return isinstance(value, str) and bool(TICKET_KEY.match(value))
+
+
+def error_signature(d: dict) -> str | None:
+    """The platform's signature, or the same fallback Scout uses when it is missing."""
+    sig = d.get("signature")
+    if sig:
+        return str(sig)
+    if d.get("endpoint") or d.get("error_type"):
+        return f"{d.get('endpoint')}:{d.get('error_type')}"
+    return None
+
+
+def incident_signature(d: dict) -> str | None:
+    issue = d.get("issue") or {}
+    source = issue.get("source") or {}
+    return (d.get("incident") or {}).get("signature") or source.get("signature") or issue.get("signature") or d.get("signature")
 
 
 def parse_ts(value: Any) -> datetime:
@@ -83,6 +108,7 @@ class State:
             self.gate: dict = {"waiting": False, "pr": None, "ticket": None, "since": None}
             self.gate_notified: set[int] = set()
             self.telemetry: dict[str, dict] = {}  # ticket -> {"agents": {handle: {...}}}
+            self.pseudo_telemetry: dict[str, dict] = {}  # handle -> telemetry reported on a pseudo-ticket
             self.queues: dict[str, int] = {}
             self.last_event_id: int = 0
             self.last_replay_at: datetime | None = None
@@ -105,9 +131,13 @@ class State:
                 "updated_ts": ts,
                 "pr_ts": None,
                 "closed_ts": None,
+                "signature": signature,
             }
-            self._attach_pending(row, signature)
             self.rows[ticket] = row
+            self._attach_pending(row, signature)
+        elif signature and not row.get("signature"):
+            row["signature"] = signature
+            self._attach_pending(row, signature)
         if title and not row["title"]:
             row["title"] = title
         return row
@@ -115,13 +145,23 @@ class State:
     def _pending_rows(self) -> list[dict]:
         return [r for k, r in self.rows.items() if is_pending(k)]
 
-    def _attach_pending(self, row: dict, signature: str | None) -> None:
-        """Fold every unattached error row with this signature into the new ticket row.
+    def _open_ticket_rows(self) -> list[dict]:
+        return [r for k, r in self.rows.items() if not is_pending(k) and r["stage"] != "closed"]
 
-        With no signature on the incident, every pending row is taken: the errors that started
-        all this belong to this ticket.
+    @staticmethod
+    def _row_signature(row: dict) -> str | None:
+        return row.get("signature") or (row.get("error") or {}).get("signature")
+
+    def _attach_pending(self, row: dict, signature: str | None) -> None:
+        """Fold every unattached error row with this signature into the ticket row.
+
+        With no signature to match on, or when nothing matched and this is the only open ticket,
+        every pending row is taken: the errors that started all this belong to this ticket. A
+        pending row is never left behind a lone ticket.
         """
         keys = [k for k, r in self.rows.items() if is_pending(k) and (signature is None or r["error"]["signature"] == signature)]
+        if not keys and len(self._open_ticket_rows()) == 1:
+            keys = [k for k in self.rows if is_pending(k)]
         if not keys:
             return
         taken = [self.rows.pop(k) for k in keys]
@@ -131,7 +171,30 @@ class State:
                     row["stages"][stage] = ts
             row["first_ts"] = min(row["first_ts"], p["first_ts"])
         first = min(taken, key=lambda p: p["first_ts"])
-        row["error"] = {**first["error"], "count": sum(p["error"]["count"] for p in taken)}
+        count = sum(p["error"]["count"] for p in taken) + (row.get("error") or {}).get("count", 0)
+        row["error"] = {**first["error"], "signature": self._row_signature(row) or first["error"]["signature"], "count": count}
+        row.setdefault("signature", row["error"]["signature"])
+
+    def _absorb_orphans(self) -> None:
+        """Any pending row whose signature now belongs to an open ticket is folded into that ticket."""
+        for key in [k for k in self.rows if is_pending(k)]:
+            pending = self.rows.get(key)
+            if not pending:
+                continue
+            sig = pending["error"]["signature"]
+            owner = next((r for r in self._open_ticket_rows() if self._row_signature(r) == sig), None)
+            if owner is not None:
+                self._attach_pending(owner, sig)
+
+    def _count_error(self, row: dict, d: dict, ts: datetime, sig: str | None) -> None:
+        """One more error.raised on a row that already exists (ticketed or pending)."""
+        if not row.get("error"):
+            row["error"] = {"signature": sig, "endpoint": d.get("endpoint"), "count": 0}
+        row["error"]["count"] += 1
+        if "error" not in row["stages"] or ts < row["stages"]["error"]:
+            row["stages"]["error"] = ts
+        row["first_ts"] = min(row["first_ts"], ts)
+        row["updated_ts"] = max(row["updated_ts"], ts)
 
     @staticmethod
     def _enter(row: dict, stage: str, ts: datetime, *, back: bool = False) -> None:
@@ -142,7 +205,7 @@ class State:
 
     def _resolve_ticket(self, e: dict) -> str | None:
         """Ticket from the event, else by PR number, else the most recent row that is past the PR stage."""
-        if e.get("ticket"):
+        if is_ticket_key(e.get("ticket")):
             return e["ticket"]
         pr = (e["detail"].get("pr") or {}).get("number")
         if pr is not None:
@@ -178,41 +241,38 @@ class State:
 
             # --- pipeline ------------------------------------------------
             if kind == "error.raised":
-                sig = d.get("signature")
-                row = next(
-                    (
-                        r for k, r in self.rows.items()
-                        if not is_pending(k) and r["stage"] != "closed" and (r.get("error") or {}).get("signature") == sig
-                    ),
-                    None,
-                ) or self.rows.get(f"{PENDING}{sig or ''}")
+                sig = error_signature(d)
+                row = next((r for r in self._open_ticket_rows() if self._row_signature(r) == sig), None)
+                if row is None:
+                    row = self.rows.get(f"{PENDING}{sig or ''}")
                 if row is None:
                     self.rows[f"{PENDING}{sig or ''}"] = row = {
                         "ticket": None,
                         "title": d.get("message") or d.get("error_type") or "Production error",
                         "stage": "error",
-                        "stages": {"error": ts},
+                        "stages": {},
                         "escalated": False,
                         "verify_failed": False,
                         "pr": None,
                         "first_ts": ts,
                         "updated_ts": ts,
-                        "error": {"signature": sig, "endpoint": d.get("endpoint"), "count": 0},
+                        "error": None,
                     }
-                row["error"]["count"] += 1
-                row["updated_ts"] = max(row["updated_ts"], ts)
+                self._count_error(row, d, ts, sig)
+                self._absorb_orphans()
             elif src == "atlas.scout" and kind == "agent.status" and d.get("status") == "working" and not ticket:
                 for row in self._pending_rows():
                     self._enter(row, "triage", ts)
                     row["updated_ts"] = ts
+                self._absorb_orphans()
             elif kind in {"incident.opened", "issue.created"} and ticket:
                 issue = d.get("issue") or {}
-                signature = (d.get("incident") or {}).get("signature") or (d.get("issue") or {}).get("signature")
-                row = self._row(ticket, ts, issue.get("title"), signature)
+                row = self._row(ticket, ts, issue.get("title"), incident_signature(d))
                 if src == "atlas.scout":
                     row["stages"].setdefault("triage", ts)
                 self._enter(row, "ticket", ts)
-                row["updated_ts"] = ts
+                row["updated_ts"] = max(row["updated_ts"], ts)
+                self._absorb_orphans()
             elif ticket:
                 row = self._row(ticket, ts)
                 thinking = (d.get("thinking") or "").lower()
@@ -310,7 +370,7 @@ class State:
             return  # unknown agent handles are shown on the timeline but do not get a card
         card["last_seen"] = ts
         if ticket:
-            card["ticket"] = ticket
+            card["ticket"] = ticket  # pseudo-tickets such as "triage" never reach here
         if d.get("authority"):
             card["authority"] = {**card.get("authority", {}), **d["authority"]}
         if actor.get("mode"):
@@ -330,9 +390,20 @@ class State:
         d = e["detail"] or {}
         tel = d.get("telemetry")
         handle = (e.get("actor") or {}).get("handle")
-        if not ticket or not isinstance(tel, dict) or not handle:
+        if not handle:
             return
-        per = self.telemetry.setdefault(ticket, {"agents": {}})["agents"].setdefault(handle, dict.fromkeys(TELEMETRY_FIELDS, 0))
+        if ticket:
+            per = self.telemetry.setdefault(ticket, {"agents": {}})["agents"].setdefault(handle, dict.fromkeys(TELEMETRY_FIELDS, 0))
+            parked = self.pseudo_telemetry.pop(handle, None)  # e.g. Scout's "triage" spend belongs to this ticket
+            if parked:
+                for k in TELEMETRY_FIELDS:
+                    per[k] = max(per[k], parked[k])
+        elif e.get("ticket") and isinstance(tel, dict):  # a pseudo-ticket: park it
+            per = self.pseudo_telemetry.setdefault(handle, dict.fromkeys(TELEMETRY_FIELDS, 0))
+        else:
+            return
+        if not isinstance(tel, dict):
+            return
         for k in TELEMETRY_FIELDS:
             try:
                 per[k] = max(per[k], float(tel.get(k) or 0))
