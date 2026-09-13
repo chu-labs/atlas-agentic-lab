@@ -108,7 +108,11 @@ data "aws_iam_policy_document" "gha_assume" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_org}/atlas-platform:*", "repo:${var.github_org}/atlas-agentic-lab:*"]
+      # GitHub's sub claim may carry numeric ids: repo:<org>@<id>/<repo>@<id>:ref:... Accept both forms.
+      values = [
+        "repo:${var.github_org}/atlas-platform:*", "repo:${var.github_org}/atlas-agentic-lab:*",
+        "repo:${var.github_org}@*/atlas-platform@*:*", "repo:${var.github_org}@*/atlas-agentic-lab@*:*",
+      ]
     }
   }
 }
