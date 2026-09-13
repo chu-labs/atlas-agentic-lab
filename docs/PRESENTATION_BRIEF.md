@@ -107,6 +107,8 @@ English on the ticket, which the audience reads live.
 
 ## 7. What is on screen (assets available to the presentation)
 
+Screenshots are in `docs/assets/` of the `chu-labs/atlas-agentic-lab` repository: `mc-v4-ops.png` (Operations), `mc-v4-eng.png` (Engineering with the gate), `mc-v3-board.png` (Board), `mc-v3-cicd.png`, `mc-v3-dora.png`, `mc-v2-drawer-pr.png` (stage drawer), `mc-v2-compare.png` (then vs now overlay), `mc-v2-agent.png` (an agent's reasoning). Videos are in `recordings/` (not in git: `clean-run.mp4`, `workbench-run.mp4`; ask Maroun).
+
 Screenshots (1920x1080, dark theme) exist for: the human gate waiting, the stage drawer showing a PR's
 artefacts and who acted with what authority, the Compare overlay (then vs now), the Operations view (production
 signal by kind, live error clusters, service health), the Engineering view (pipeline, dev agents, assigned
