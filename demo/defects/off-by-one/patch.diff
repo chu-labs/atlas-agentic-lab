@@ -1,11 +1,11 @@
 diff --git a/atlas/domain/renewals.py b/atlas/domain/renewals.py
-index 47a18cd..0098959 100644
+index 11c99b0..7480edd 100644
 --- a/atlas/domain/renewals.py
 +++ b/atlas/domain/renewals.py
-@@ -16,7 +16,7 @@ def business_today(now: datetime, tz: str) -> date:
- 
- def renewal_window(today: date, days: int) -> tuple[date, date]:
-     """Inclusive [today, today + days] window of expiry dates that are due for renewal."""
+@@ -20,7 +20,7 @@ def renewal_window(today: date, days: int) -> tuple[date, date]:
+     A policy expiring exactly `days` days from today is in the run. This boundary is documented
+     intent (see CLAUDE.md); the reconcile control depends on it.
+     """
 -    return today, today + timedelta(days=days)
 +    return today, today + timedelta(days=days - 1)
  
