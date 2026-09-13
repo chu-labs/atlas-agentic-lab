@@ -573,6 +573,20 @@ def _sprint15_human() -> list[Spec]:
             comments=[(3 * DAY, "priya", f"{GITHUB}/pull/23 — weight unchanged, input changed to `incurred`. 14 buildings move band; list attached in the PR."), (4 * DAY - 10, "alex", "Checked the 14. All defensible. Approved.")],
             pr_url=f"{GITHUB}/pull/23", branch="priya/severity-incurred",
         ),
+        _human(
+            at(8, 31, 10, 0), "Story", "Broker list endpoint: paginate and add a state filter", "Done", "Medium", "maroun", s,
+            assignee="tom", labels=["brokers"], points=2,
+            description="`GET /api/brokers` returns all 40 brokers unpaged. Add `limit`/`offset` and `state=` so the portal can filter by licence state.",
+            steps=[(20, "maroun", "Backlog", "Triage"), (2 * DAY, "tom", "Triage", "In Progress"), (3 * DAY, "tom", "In Progress", "In Review"), (3 * DAY + 240, "priya", "In Review", "Done")],
+            comments=[(3 * DAY, "tom", f"{GITHUB}/pull/19 — same shape as the policies list.")],
+            pr_url=f"{GITHUB}/pull/19", branch="tom/brokers-paging",
+        ),
+        _human(
+            at(9, 8, 14, 30), "Task", "Renewal reminder email: underwriting review of the wording", "In Progress", "Low", "maroun", s,
+            assignee="alex", labels=["renewals", "brokers"], points=1,
+            description="The 30-day reminder still says 'your premium may change' with no reason. Alex to review the wording against the product disclosure statement before Tom wires it into the batch job.",
+            steps=[(10, "maroun", "Backlog", "Triage"), (DAY, "alex", "Triage", "In Progress")],
+        ),
         # In Review
         _human(
             at(9, 7, 9, 45), "Task", "Add request id to every log line and to error events", "In Review", "Medium", "maroun", s,

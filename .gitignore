@@ -25,3 +25,6 @@ recordings/*.mp4
 .DS_Store
 labctl/.venv/
 workbench/.venv/
+board/.venv/
+board/web/node_modules/
+board/web/dist/
