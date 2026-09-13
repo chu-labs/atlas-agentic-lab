@@ -43,11 +43,13 @@ def _teammates(ticket: str | None = None) -> list[dict]:
 
 
 @mcp.tool()
-def spawn_teammate(role: str, task: str, ticket: str) -> str:
+def spawn_teammate(role: str, task: str, ticket: str, base: str = "HEAD") -> str:
     """Spawn a real teammate: a headless Claude Code process in its own git worktree and its own tmux pane.
 
     role: analyst | builder | tester | reviewer. task: what to do, in plain English (include the ticket text).
-    ticket: e.g. ATLAS-142. Returns the branch and pane. Maximum four teammates at once.
+    ticket: e.g. ATLAS-142. base: the commit or branch the teammate starts from (default HEAD; give the
+    builder's branch, e.g. workbench/ATLAS-142/builder, to spawn a reviewer on the builder's work).
+    Returns the branch and pane. Maximum four teammates at once.
     """
     if role not in ROLES:
         return f"unknown role {role!r}; choose from {', '.join(ROLES)}"
@@ -60,7 +62,7 @@ def spawn_teammate(role: str, task: str, ticket: str) -> str:
     if wt.exists():
         subprocess.run(["git", "worktree", "remove", "--force", str(wt)], cwd=repo, capture_output=True)
     subprocess.run(["git", "branch", "-D", branch], cwd=repo, capture_output=True)
-    subprocess.run(["git", "worktree", "add", "-q", "-b", branch, str(wt), "HEAD"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(["git", "worktree", "add", "-q", "-b", branch, str(wt), base], cwd=repo, check=True, capture_output=True)
     subprocess.run(["uv", "sync", "--extra", "dev", "--quiet"], cwd=wt, capture_output=True)
 
     d = STATE_DIR / ticket
