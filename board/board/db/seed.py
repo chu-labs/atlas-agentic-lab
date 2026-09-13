@@ -53,7 +53,7 @@ USERS = [
     dict(
         handle="forge", display_name="Forge", kind="agent", avatar="⚒️", color="#fb923c",
         remit="Engineering: reproduces, tests first, fixes, opens PRs",
-        authority=_authority(can_read_production_telemetry=True, can_write_code=True), mode="supervised",
+        authority=_authority(can_read_production_telemetry=True, can_write_code=True), mode="autonomous",
     ),
     dict(
         handle="sentinel", display_name="Sentinel", kind="agent", avatar="🛡️", color="#34d399",
