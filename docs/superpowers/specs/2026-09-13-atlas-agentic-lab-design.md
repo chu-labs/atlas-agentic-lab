@@ -25,7 +25,7 @@ exactly what was chosen and why.
 | Database | One RDS Postgres 16 `db.t4g.micro`, `skip_final_snapshot`, three databases: `atlas`, `board`, `mission`. | About a third the cost of Aurora Serverless v2 at 0.5 ACU. |
 | Egress | **No NAT gateway.** Fargate tasks run in public subnets with public IPs; security groups accept inbound only from the ALB SG. Agents need real egress to Anthropic and GitHub, which VPC endpoints cannot provide. | Saves roughly AUD 30 over the lab's life. |
 | Basic auth | Middleware in each app, credential read from Secrets Manager. Agents inside the VPC call services through the ALB with the same credential. | ALB has no native basic auth. |
-| Event bus | Every component emits to one EventBridge bus `atlas-lab`. Rules route: `board.issue.*` → work queue when a ticket is assigned to Forge; `*` → Mission Control SQS queue. | One bus, one contract, replayable. |
+| Event bus | Every component emits to one EventBridge bus `atlas-agentic-lab`. Scout reads the `prod-errors` SQS queue directly (the platform writes it), not via a bus rule. Rules route: `board.issue.*` → work queue when a ticket is assigned to Forge; `*` → Mission Control SQS queue. | One bus, one contract, replayable. |
 | Live feed | Mission Control backend (FastAPI on Fargate) consumes its SQS queue, persists events to Postgres, and fans out over a WebSocket through the ALB. No API Gateway, no Lambda. | Fewer moving parts; persistence is what makes `labctl record` possible. |
 | Human gate | `production` GitHub environment has a required reviewer (the owner) **and** branch protection requires one approval. One dashboard **Approve** click: PR review approve → merge → approve the pending environment deployment. Both gates resolve from one human action, so there is a single pause. | Acceptance criteria: the human gate is the only pause. |
 | Sentinel authority | Posts `COMMENT` or `REQUEST_CHANGES` reviews only, never `APPROVE`. | So branch protection is genuinely unsatisfiable without the human. |
@@ -35,6 +35,14 @@ exactly what was chosen and why.
 | Repo locations | Both repos are siblings under `~/Dev/mm-lecture-maq-uni-q4-26/`, pushed to `chu-labs`. | Keeps the lecture material together. |
 | Secrets | Anthropic key, GitHub App private key, basic-auth credential and DB password live only in Secrets Manager. Terraform creates the secrets with placeholder values and `ignore_changes` on the value; real values are written by the CLI. | Keeps plaintext out of state. |
 | VPC CIDR | `10.42.0.0/16`, two public subnets in `ap-southeast-2a/b`. | Existing account VPC uses `10.20.160.0/20`; no peering, but avoid overlap anyway. |
+
+## Refinements made during the build (2026-09-13)
+
+- A fourth secret `github-human` (fine-grained PAT + login) exists only so Mission Control's Approve button can act as the human. Agents never read it.
+- Defect patches also delete the tests that would have caught them, so each defective build ships with a green suite, like a real regression. The float defect takes its float path only above 50 lots so fixture-based tests stay green while production trips on real policies.
+- The platform gained four legitimate controls so every defect produces a production signal: an expired-policy rule on quoting, a cent-exact allocation check, a renewals reconciliation endpoint, and a slow-request event above 1 s.
+- `labctl reset` force-pushes `main` back to a recorded baseline SHA (branch protection allows admin force-push for this reason) and redeploys the baseline image.
+- The Workbench MCP server is `mcp` 1.x (`FastMCP`); the 2.x SDK renamed it.
 
 ## Open items
 
