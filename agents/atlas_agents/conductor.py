@@ -110,7 +110,7 @@ class Agent(base.Agent):
                 check(f"reproduction {ep}", repro)
         return checks
 
-    def _signature_seen_since(self, signature: str, since: datetime, settle: int = 45) -> int:
+    def _signature_seen_since(self, signature: str, since: datetime, settle: int = 30) -> int:
         """Wait for traffic to exercise the fix, then count the signature in the platform's logs."""
         import boto3
 

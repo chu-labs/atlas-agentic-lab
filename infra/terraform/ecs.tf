@@ -106,7 +106,7 @@ resource "aws_ecs_service" "web" {
 
   deployment_minimum_healthy_percent = 0
   deployment_maximum_percent         = 200
-  health_check_grace_period_seconds  = 60
+  health_check_grace_period_seconds  = 30
 
   lifecycle {
     ignore_changes = [task_definition, desired_count]
