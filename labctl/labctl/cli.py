@@ -198,6 +198,60 @@ def _basic_auth() -> tuple[str, str]:
 
 
 @main.command()
+@click.argument("defect_id", required=False)
+@click.option("--no-deploy", is_flag=True, help="Push the defective commit but do not deploy it")
+@click.option("--list", "list_", is_flag=True, help="List available defects")
+def inject(defect_id, no_deploy, list_):
+    """Deploy a defective build to production and start the traffic that triggers it."""
+    from . import defects, traffic
+    from .config import outputs as o
+
+    if list_ or not defect_id:
+        t = Table("id", "difficulty", "title", "agent should")
+        for d in defects.list_defects():
+            t.add_row(d["id"], d["difficulty"], d["title"], d.get("expected_agent_behaviour", "fix"))
+        console.print(t)
+        return
+    st = defects.inject(defect_id, no_deploy=no_deploy)
+    console.print(f"[yellow]injected[/] {st['injected']}")
+    if not traffic.running():
+        user, pw = _basic_auth()
+        traffic.start(o().urls["atlas-platform"], user, pw, 3.0)
+        console.print("traffic started")
+
+
+@main.command()
+@click.option("--reseed", is_flag=True, help="Also reseed the platform database")
+def reset(reseed):
+    """Return everything to the clean pre-demo state (target: under two minutes)."""
+    from . import defects
+
+    for line in defects.reset(reseed=reseed or None):
+        console.print(line)
+
+
+@main.group()
+def baseline():
+    """The clean state that `reset` returns to."""
+
+
+@baseline.command("set")
+def baseline_set():
+    """Record current origin/main and the production image as the clean baseline."""
+    from . import defects
+
+    st = defects.baseline_set()
+    console.print({k: st[k] for k in ("baseline_sha", "baseline_image")})
+
+
+@baseline.command("show")
+def baseline_show():
+    from . import state
+
+    console.print(state.load())
+
+
+@main.command()
 def outputs():
     """Show Terraform outputs the lab runs on."""
     from .config import outputs as o
