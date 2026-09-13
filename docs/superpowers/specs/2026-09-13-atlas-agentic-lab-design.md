@@ -44,6 +44,20 @@ exactly what was chosen and why.
 - `labctl reset` force-pushes `main` back to a recorded baseline SHA (branch protection allows admin force-push for this reason) and redeploys the baseline image.
 - The Workbench MCP server is `mcp` 1.x (`FastMCP`); the 2.x SDK renamed it.
 
+## Afternoon refinements (13 Sep 2026)
+
+- Scout clusters by failing code frame (crashes), rule name (business rules) or endpoint (performance), so one root cause is one ticket; tickets open in Triage.
+- Forge closes duplicates that share a cluster with a ticket that already has a PR, skips Done tickets, and treats a recent commit that broke documented intent as a regression even if it removed the guarding test. The off-by-one patch therefore keeps the original docstring and CLAUDE.md lists the boundary as documented intent.
+- Sentinel never approves; it reviews Workbench PRs too. Conductor settles 30 s before checking the signature. Deploy builds on a native arm64 runner.
+- GitHub's OIDC `sub` claim carries numeric ids; the trust policy accepts both forms. SQS policies condition on the rule ARN, not the bus ARN.
+- Mission Control v2: pipeline rows only for tickets, production signal strip, duration chips (machine vs human), clickable stage drawer, then-vs-now lane with the owner's baselines (small bug ≈ 14 days including a 7-day backlog wait), pure replay.
+- Workbench: `spawn_teammate(base=)` for a reviewer on the builder's branch, `open_pr` pushes and opens as the App so the human approval counts, `labctl inject <id> --workbench` files a human ticket without deploying.
+- `labctl baseline set` refuses to record a defect build; `labctl record video` renders MP4 through a local dashboard and headless Chromium.
+
+## Extras status
+
+Built: the agent that says no (40 s live), cost per ticket, audit trail (stage drawer), parallel fleet (`labctl scale forge 3`). Available but not rehearsed: the agent that gets caught (label a ticket `review:strict`). Not built: spec-to-PR, DORA panel, a deliberate guardrail trip (the `guard()` mechanism exists; no trigger command).
+
 ## Open items
 
 - Human baseline figures for the telemetry panel (owner to supply by M7).
