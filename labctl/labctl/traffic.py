@@ -21,7 +21,13 @@ PID_FILE = LOCAL_CFG / "traffic.pid"
 LOG_FILE = LOCAL_CFG / "traffic.log"
 
 
-def _endpoints(rng: random.Random, building_ids: list[int], policy_numbers: list[str], due_soon: list[str] | None = None):
+def _endpoints(rng: random.Random, building_ids: list[int], policy_numbers: list[str], due_soon: list[str] | None = None, hot_buildings: list[int] | None = None):
+    """Renewal-season shape: a good share of building and quote traffic goes to policies due soon."""
+    hot = hot_buildings or building_ids
+
+    def bld():
+        return rng.choice(hot) if rng.random() < 0.5 else rng.choice(building_ids)
+
     while True:
         r = rng.random()
         if r < 0.30:
@@ -29,17 +35,17 @@ def _endpoints(rng: random.Random, building_ids: list[int], policy_numbers: list
         elif r < 0.33:
             yield "GET", f"/api/renewals/reconcile?days={rng.choice([14, 30, 30, 60])}"
         elif r < 0.50:
-            yield "GET", f"/api/buildings/{rng.choice(building_ids)}/risk"
+            yield "GET", f"/api/buildings/{bld()}/risk"
         elif r < 0.62:
             yield "POST", f"/api/policies/{rng.choice(policy_numbers)}/quote"
         elif r < 0.66:
             yield "POST", f"/api/policies/{rng.choice(due_soon or policy_numbers)}/quote"
         elif r < 0.75:
-            yield "GET", f"/api/buildings/{rng.choice(building_ids)}/claims"
+            yield "GET", f"/api/buildings/{bld()}/claims"
         elif r < 0.85:
             yield "GET", f"/api/policies/{rng.choice(policy_numbers)}"
         elif r < 0.93:
-            yield "GET", f"/api/buildings/{rng.choice(building_ids)}"
+            yield "GET", f"/api/buildings/{bld()}"
         else:
             yield "GET", "/api/stats"
 
@@ -52,11 +58,13 @@ def loop(base_url: str, user: str, password: str, rps: float) -> None:
         def discover():
             b = [x["id"] for x in c.get("/api/buildings", params={"limit": 500, "offset": rng.randint(0, 2000)}).json()]
             p = [x["policy_number"] for x in c.get("/api/policies", params={"limit": 500}).json()]
-            d = [x["policy_number"] for x in c.get("/api/policies", params={"due_within_days": 2, "limit": 100}).json()]
-            return b or [1], p or ["ATL-100000"], d
+            due = c.get("/api/policies", params={"due_within_days": 30, "limit": 500}).json()
+            d = [x["policy_number"] for x in due if x.get("days_until_expiry", 99) <= 2]
+            hot = [x["building_id"] for x in due]
+            return b or [1], p or ["ATL-100000"], d, hot
 
-        buildings, policies, due_soon = discover()
-        gen = _endpoints(rng, buildings, policies, due_soon)
+        buildings, policies, due_soon, hot = discover()
+        gen = _endpoints(rng, buildings, policies, due_soon, hot)
         n = 0
         stats = {"ok": 0, "4xx": 0, "5xx": 0, "err": 0}
         while True:
@@ -71,8 +79,8 @@ def loop(base_url: str, user: str, password: str, rps: float) -> None:
             if n % 50 == 0:
                 LOG_FILE.write_text(json.dumps({"requests": n, **stats, "ts": time.time()}))
             if n % 500 == 0:
-                buildings, policies, due_soon = discover()
-                gen = _endpoints(rng, buildings, policies, due_soon)
+                buildings, policies, due_soon, hot = discover()
+                gen = _endpoints(rng, buildings, policies, due_soon, hot)
             time.sleep(max(0.0, rng.expovariate(rps)))
 
 
