@@ -644,7 +644,9 @@ section, aside, .app > * { min-height: 0; min-width: 0; }
 .caret { color: var(--dim); font-size: 0.8rem; }
 .issue-pr { font-size: 0.8rem; font-weight: 800; color: #9cc0ff; border: 1px solid #2f4f8a; border-radius: 0.3rem; padding: 0 0.35rem; text-decoration: none; }
 .issue-when { margin-left: auto; font-family: var(--mono); font-size: 0.85rem; color: var(--dim); }
-.assign-menu { position: absolute; left: 8px; bottom: 44px; z-index: 20; background: #0d1220; border: 1px solid #3a4a76; border-radius: 12px; padding: 6px; min-width: 16rem; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; }
+.popover { position: fixed; z-index: 100; max-height: min(60vh, 520px); overflow-y: auto; scrollbar-width: thin; animation: fadein 0.12s ease-out; }
+.assign-item.active { background: #14294f; outline: 2px solid #7aa2ff; outline-offset: -2px; }
+.popover, .assign-menu { z-index: 100; background: #0d1220; border: 1px solid #3a4a76; border-radius: 12px; padding: 6px; min-width: 16rem; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; }
 .assign-group { font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); padding: 4px 8px 2px; font-weight: 800; }
 .assign-item { font: inherit; font-size: 0.95rem; display: flex; align-items: center; gap: 0.6rem; background: transparent; border: 0; color: var(--text); padding: 4px 8px; border-radius: 8px; cursor: pointer; text-align: left; }
 .assign-item:hover { background: #14294f; }

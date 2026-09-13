@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Popover, type PopoverItem } from "./Popover";
 import { Avatar } from "./Avatar";
 import type { FleetCard, Selection } from "./types";
 import { hms } from "./time";
@@ -140,13 +141,37 @@ function IssueCard({
   onAssign: (handle: string | null) => void;
 }) {
   const [menu, setMenu] = useState(false);
-  useEffect(() => {
-    if (!menu) return;
-    const close = () => setMenu(false);
-    window.addEventListener("click", close);
-    return () => window.removeEventListener("click", close);
-  }, [menu]);
+  const trigger = useRef<HTMLButtonElement>(null);
   const a = issue.assignee;
+  const items: PopoverItem[] = [
+    ...agents.map((c) => ({
+      key: c.handle,
+      group: "agents",
+      label: c.display_name,
+      icon: <Avatar handle={c.handle} size={28} color={c.color} emoji={c.avatar} />,
+      meta: <span className={`mode-tag mode-${c.mode}`}>{c.mode}</span>,
+      onPick: () => onAssign(c.handle),
+    })),
+    ...humans.map((u) => ({
+      key: u.handle,
+      group: "humans",
+      label: u.display_name,
+      icon: <Avatar handle={u.handle} size={28} color={u.color} emoji={u.avatar} />,
+      meta: <span className="muted small">{u.remit}</span>,
+      onPick: () => onAssign(u.handle),
+    })),
+    {
+      key: "__none",
+      group: "",
+      label: "Unassign",
+      icon: (
+        <span className="av av-emoji" style={{ width: 28, height: 28 }}>
+          ?
+        </span>
+      ),
+      onPick: () => onAssign(null),
+    },
+  ];
   return (
     <article className={`issue ${selected ? "selected" : ""} prio-${issue.priority.toLowerCase()}`} onClick={onOpen}>
       <div className="issue-top">
@@ -159,11 +184,21 @@ function IssueCard({
       <div className="issue-title">{issue.title}</div>
       <div className="issue-bottom">
         <button
+          ref={trigger}
           className="assignee"
-          title={a ? `${a.display_name} · click to reassign` : "unassigned · click to assign"}
+          aria-haspopup="menu"
+          aria-expanded={menu}
+          title={a ? `${a.display_name} · click or press Enter to reassign` : "unassigned · click or press Enter to assign"}
           onClick={(e) => {
             e.stopPropagation();
             setMenu((v) => !v);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+              e.preventDefault();
+              e.stopPropagation();
+              setMenu(true);
+            }
           }}
         >
           <Avatar handle={a?.handle} size={28} color={a?.color} emoji={a?.avatar} />
@@ -177,32 +212,7 @@ function IssueCard({
         )}
         <span className="issue-when">{hms(issue.updated_at)}</span>
       </div>
-      {menu && (
-        <div className="assign-menu" onClick={(e) => e.stopPropagation()}>
-          <div className="assign-group">agents</div>
-          {agents.map((c) => (
-            <button key={c.handle} className="assign-item" onClick={() => onAssign(c.handle)}>
-              <Avatar handle={c.handle} size={28} color={c.color} emoji={c.avatar} />
-              <span>{c.display_name}</span>
-              <span className={`mode-tag mode-${c.mode}`}>{c.mode}</span>
-            </button>
-          ))}
-          <div className="assign-group">humans</div>
-          {humans.map((u) => (
-            <button key={u.handle} className="assign-item" onClick={() => onAssign(u.handle)}>
-              <Avatar handle={u.handle} size={28} color={u.color} emoji={u.avatar} />
-              <span>{u.display_name}</span>
-              <span className="muted small">{u.remit}</span>
-            </button>
-          ))}
-          <button className="assign-item assign-none" onClick={() => onAssign(null)}>
-            <span className="av av-emoji" style={{ width: 28, height: 28 }}>
-              ?
-            </span>
-            <span>Unassign</span>
-          </button>
-        </div>
-      )}
+      {menu && trigger.current && <Popover anchor={trigger.current} items={items} onClose={() => setMenu(false)} />}
     </article>
   );
 }
