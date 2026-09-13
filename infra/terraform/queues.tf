@@ -26,10 +26,11 @@ data "aws_iam_policy_document" "queue_from_events" {
     }
     actions   = ["sqs:SendMessage"]
     resources = [aws_sqs_queue.q[each.key].arn]
+    # EventBridge presents the *rule* ARN as the source when delivering to a target.
     condition {
-      test     = "ArnEquals"
+      test     = "ArnLike"
       variable = "aws:SourceArn"
-      values   = [aws_cloudwatch_event_bus.lab.arn]
+      values   = ["arn:aws:events:${var.region}:${data.aws_caller_identity.me.account_id}:rule/${aws_cloudwatch_event_bus.lab.name}/*"]
     }
   }
 }
