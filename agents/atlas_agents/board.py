@@ -51,7 +51,7 @@ class Board:
     def update(self, key: str, **fields) -> dict:
         return self._j(self.http.patch(f"/api/issues/{key}", json=fields))
 
-    FLOW = ["Backlog", "Triage", "In Progress", "In Review", "Done"]
+    FLOW: tuple[str, ...] = ("Backlog", "Triage", "In Progress", "In Review", "Done")
 
     def transition(self, key: str, status: str) -> dict:
         return self._j(self.http.post(f"/api/issues/{key}/transition", json={"status": status}))
