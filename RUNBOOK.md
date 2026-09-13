@@ -71,6 +71,12 @@ Forge should escalate, not fix. `zero-lots` also flips three buildings to zero l
 
 ## 2b. Mission Control controls
 
+- Tabs: **1** Mission Control, **2** Board (assign any ticket to an agent from the card menu, file a new ticket with
+  "+ New ticket"; assigning to Forge starts it within ~20 s), **3** CI/CD (live GitHub Actions runs, PRs, an
+  Approve-deployment button for runs approved on GitHub directly), **4** DORA (agentic vs traditional vs elite).
+- The pipeline always reflects what is happening: an OBSERVING row lights Error/Triage before a ticket exists and
+  becomes the ticket row in place.
+
 - Click any pipeline stage, fleet card, "recently closed" item or timeline row to open the drawer: what
   happened, who acted with what authority, artefacts (ticket, branch, PR body, review, deploy run, smoke checks).
   `Esc` closes it. Deep links work: `#ATLAS-37/pr`, `#agent/forge`, `#compare`.
@@ -95,6 +101,7 @@ close it.
 |---|---|
 | Dashboard shows nothing after inject for 3 min | `labctl status`: is `scout` running? Is `prod-errors` depth rising? If errors rise but no ticket: Scout's LLM call may be failing; `aws logs tail /atlas-agentic-lab/scout --since 5m --profile chu-ai`. Switch to replay if under time pressure. |
 | Forge stuck at *cloning* / *working* > 6 min | `aws logs tail /atlas-agentic-lab/forge --since 10m`. Common: GitHub App token, or the RDS test database. Forge gives up and escalates to you after its budget; the ticket goes to Triage assigned to you. Replay. |
+| Sentinel reviewed (reasoning on the ticket) but nothing on GitHub | GitHub's review endpoint returned 500 (seen 13 Sep). Sentinel now falls back to a PR comment. If a message reached the DLQ: `aws sqs start-message-move-task --source-arn <sentinel-dlq arn> --destination-arn <sentinel arn>`. |
 | Sentinel never comments | CI may still be running on the PR head (Sentinel waits up to 4 min). Check the PR checks tab. |
 | Approve button shows "GitHub refused: 403" | The PAT lacks a permission (merge needs Contents read+write). Edit the token in place on GitHub; no redeploy needed; click Approve again. |
 | Approve button errors | The human PAT is missing or expired (`labctl secrets status`). Approve on GitHub instead: approve the review, merge, then Actions → the run → **Review deployments** → approve. Conductor reacts to `deploy.completed` either way. |
