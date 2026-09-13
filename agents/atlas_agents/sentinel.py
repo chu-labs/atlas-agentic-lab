@@ -120,7 +120,7 @@ class Agent(base.Agent):
         event = "REQUEST_CHANGES" if request_changes else "COMMENT"
         try:
             self.gh.review(number, event, body)
-        except Exception:  # noqa: BLE001
+        except Exception:
             # GitHub occasionally 500s on the reviews endpoint; the review must still land.
             log.exception("review endpoint failed; posting as a PR comment instead")
             self.gh.comment(number, body)
