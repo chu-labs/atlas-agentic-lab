@@ -1,0 +1,25 @@
+# secrets and local state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+.terraform.lock.hcl
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+# node
+node_modules/
+dist/
+# recordings
+recordings/*.mp4
+# os
+.DS_Store
