@@ -22,6 +22,11 @@ locals {
     ALB_DNS               = aws_lb.lab.dns_name
     GITHUB_ORG            = var.github_org
     QUEUE_URL_PROD_ERRORS = aws_sqs_queue.q["prod-errors"].id
+    QUEUE_URL_FORGE       = aws_sqs_queue.q["forge"].id
+    QUEUE_URL_SENTINEL    = aws_sqs_queue.q["sentinel"].id
+    QUEUE_URL_CONDUCTOR   = aws_sqs_queue.q["conductor"].id
+    BOARD_URL             = "http://${aws_lb.lab.dns_name}:8081"
+    PLATFORM_URL          = "http://${aws_lb.lab.dns_name}:8082"
     SECRET_ANTHROPIC      = aws_secretsmanager_secret.s["anthropic-api-key"].arn
     SECRET_GITHUB_APP     = aws_secretsmanager_secret.s["github-app"].arn
     SECRET_BASIC_AUTH     = aws_secretsmanager_secret.s["basic-auth"].arn
