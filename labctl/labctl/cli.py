@@ -236,11 +236,13 @@ def baseline():
 
 
 @baseline.command("set")
-def baseline_set():
+@click.option("--image", default=None, help="Clean image reference to record instead of the running one")
+@click.option("--force", is_flag=True)
+def baseline_set(image, force):
     """Record current origin/main and the production image as the clean baseline."""
     from . import defects
 
-    st = defects.baseline_set()
+    st = defects.baseline_set(image=image, force=force)
     console.print({k: st[k] for k in ("baseline_sha", "baseline_image")})
 
 

@@ -53,11 +53,20 @@ def ensure_clone() -> Path:
     return CLONE
 
 
-def baseline_set(tag: str | None = None) -> dict:
-    """Record the current origin/main as the clean baseline and the image currently in production."""
+def baseline_set(image: str | None = None, force: bool = False) -> dict:
+    """Record origin/main as the clean baseline and the image in production as the clean image.
+
+    Refuses while a defect is injected (the running image would be the defective one) unless
+    `image` names the clean image explicitly or `force` is given.
+    """
+    st = state.load()
+    if st.get("injected") and not (image or force):
+        raise SystemExit(f"{st['injected']['id']} is injected; production is not clean. Run `labctl reset` first, or pass --image.")
     ensure_clone()
     sha = _git("rev-parse", "origin/main")
-    image = tag or ecs.current_image("atlas-platform")
+    image = image or ecs.current_image("atlas-platform")
+    if "defect-" in image and not force:
+        raise SystemExit(f"running image {image} is a defect build; deploy a clean build first (labctl deploy atlas-platform) or pass --force")
     return state.save(baseline_sha=sha, baseline_image=image, injected=None)
 
 
