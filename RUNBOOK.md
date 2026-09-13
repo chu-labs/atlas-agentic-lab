@@ -35,6 +35,14 @@ Terminal font at least 20 pt. Dark theme.
 
 ## 2. Rehearse (repeat as often as you like)
 
+The one-command way: `labctl demo run off-by-one --record clean-run`. It checks the lab is clean, starts
+traffic if needed, marks a recording, injects, and streams the agents' events to your terminal as they
+happen. At the gate it prints "WAITING ON YOU"; approve on the dashboard (or type `a` and Enter in the
+terminal). When Conductor closes the ticket it saves the recording. `labctl demo watch` just watches.
+`labctl demo storm` scales Forge to three and injects three defects at once. Then `labctl reset`.
+
+The step-by-step way:
+
 ```
 labctl record mark
 labctl inject off-by-one          # pushes the defect commit, builds, deploys (~70 s), traffic keeps running
