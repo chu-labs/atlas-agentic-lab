@@ -19,7 +19,7 @@ locals {
 
   # Queue-polling agents. All share one image except Forge, which carries Claude Code.
   agent_services = {
-    scout      = { cpu = 256, memory = 512, image = "agent", queue = "scout" }
+    scout      = { cpu = 256, memory = 512, image = "agent", queue = "prod-errors" }
     sentinel   = { cpu = 256, memory = 512, image = "agent", queue = "sentinel" }
     conductor  = { cpu = 256, memory = 512, image = "agent", queue = "conductor" }
     watchtower = { cpu = 256, memory = 512, image = "agent", queue = "watchtower" }
@@ -31,5 +31,5 @@ locals {
   images = toset(["atlas-platform", "atlas-board", "mission-control", "agent", "forge"])
 
   # Work queues. prod-errors is fed by atlas-platform directly; the rest by EventBridge rules.
-  queues = toset(["prod-errors", "scout", "forge", "sentinel", "conductor", "watchtower", "mission-events"])
+  queues = toset(["prod-errors", "forge", "sentinel", "conductor", "watchtower", "mission-events"])
 }

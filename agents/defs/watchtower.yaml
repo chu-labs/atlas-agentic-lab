@@ -1,0 +1,16 @@
+name: watchtower
+display_name: Watchtower
+avatar: "🗼"
+color: "#ef4444"
+remit: When the error rate crosses a threshold, opens an incident, keeps a running timeline, and drafts a blameless postmortem.
+mode: autonomous
+authority:
+  can_read_production_telemetry: true
+  can_create_tickets: true
+  can_write_code: false
+  can_review: false
+  can_merge: false
+  can_deploy: false
+  can_page_humans: true
+  can_change_business_rules: false
+  must_escalate_when: [severity_1, customer_impact_over_500]
