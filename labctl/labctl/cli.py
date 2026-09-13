@@ -275,6 +275,90 @@ def workbench(ticket, do_reset, no_attach):
         console.print("session 'atlas' ready: tmux attach -t atlas")
 
 
+@main.group()
+def record():
+    """Capture a full run from Mission Control and replay it as the fallback."""
+
+
+@record.command("mark")
+def record_mark():
+    """Mark the start of a run (call before `labctl inject`)."""
+    from . import record as r
+
+    console.print(f"recording from event {r.mark()}")
+
+
+@record.command("save")
+@click.argument("name")
+def record_save(name):
+    """Save everything since the mark as a named recording (also written to recordings/<name>.json)."""
+    from . import record as r
+
+    console.print(r.save(name))
+
+
+@record.command("play")
+@click.argument("name")
+@click.option("--speed", default=1.0, show_default=True, help="1.0 = original timing; 4.0 = four times faster")
+def record_play(name, speed):
+    """Replay a recording into the live dashboard."""
+    from . import record as r
+
+    console.print(r.replay(name, speed))
+
+
+@record.command("list")
+def record_list():
+    from . import record as r
+
+    for rec in r.list_recordings():
+        console.print(rec)
+
+
+@main.command()
+@click.option("--yes", is_flag=True, help="Skip the confirmation prompt")
+def teardown(yes):
+    """terraform destroy everything, then check nothing tagged is left and show month-to-date cost."""
+    from . import teardown as t
+    from . import traffic
+
+    traffic.stop()
+    if not yes:
+        click.confirm("This destroys the whole lab (VPC, database, everything). Continue?", abort=True)
+    rc = t.destroy()
+    if rc != 0:
+        console.print(f"[red]destroy exited {rc}[/]")
+        raise SystemExit(rc)
+    left = t.leftovers()
+    if left:
+        console.print("[red]leftover resources:[/]")
+        for arn in left:
+            console.print(f"  {arn}")
+    else:
+        console.print("[green]no tagged resources left[/]")
+    try:
+        console.print({"month_to_date_cost": t.month_to_date_cost()})
+    except Exception as e:  # noqa: BLE001
+        console.print(f"cost explorer unavailable: {e}")
+
+
+@main.command()
+def cost():
+    """Month-to-date AWS cost for the lab tag."""
+    from . import teardown as t
+
+    console.print(t.month_to_date_cost())
+
+
+@main.command()
+def leftovers():
+    """List tagged resources that still exist (use after teardown)."""
+    from . import teardown as t
+
+    left = t.leftovers()
+    console.print(left or "[green]none[/]")
+
+
 @main.command()
 def outputs():
     """Show Terraform outputs the lab runs on."""
