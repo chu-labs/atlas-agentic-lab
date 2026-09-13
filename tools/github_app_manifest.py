@@ -22,7 +22,7 @@ OUT = Path.home() / ".config" / "atlas-lab" / "github-app.json"
 STATE = secrets.token_urlsafe(16)
 
 MANIFEST = {
-    "name": "atlas-agents",
+    "name": os.environ.get("ATLAS_GH_APP_NAME", "chu-atlas-agents"),
     "url": f"https://github.com/{ORG}",
     "description": "Agent fleet identity for the ATLAS Agentic SDLC Demo Lab. Ephemeral.",
     "public": False,
@@ -44,7 +44,7 @@ MANIFEST = {
 
 FORM = f"""<!doctype html><meta charset=utf-8><title>atlas-agents manifest</title>
 <body style="font:18px system-ui;max-width:40em;margin:4em auto">
-<h1>Create the <code>atlas-agents</code> GitHub App</h1>
+<h1>Create the <code>{MANIFEST["name"]}</code> GitHub App</h1>
 <p>Submitting sends the manifest below to GitHub for org <b>{ORG}</b>. On GitHub, click
 <b>Create GitHub App</b>. You will be redirected back here.</p>
 <form method="post" action="https://github.com/organizations/{ORG}/settings/apps/new?state={STATE}">
