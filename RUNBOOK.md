@@ -71,9 +71,14 @@ Forge should escalate, not fix. `zero-lots` also flips three buildings to zero l
 
 ## 2b. Mission Control controls
 
-- Tabs: **1** Mission Control, **2** Board (assign any ticket to an agent from the card menu, file a new ticket with
-  "+ New ticket"; assigning to Forge starts it within ~20 s), **3** CI/CD (live GitHub Actions runs, PRs, an
-  Approve-deployment button for runs approved on GitHub directly), **4** DORA (agentic vs traditional vs elite).
+- Tabs: **1** Operations (production signal by kind, live clusters, service health from ECS and the ALB, incidents,
+  Scout and Watchtower), **2** Engineering (pipeline, dev agents, assigned work, PRs, the gate), **3** Board (assign
+  any ticket to an agent from the card menu, file a new ticket with "+ New ticket"; assigning to Forge starts it
+  within ~20 s), **4** CI/CD (live GitHub Actions runs, PRs, an Approve-deployment button for runs approved on
+  GitHub directly), **5** DORA (agentic vs traditional vs elite).
+- Infrastructure incidents on demand: `labctl chaos kill-task` (ECS replaces the platform task in ~1 min; the ALB
+  serves 503s meanwhile) or `labctl chaos outage --seconds 90`. The ops monitor raises `infra.alert`; Watchtower
+  opens an incident if the rate threshold is crossed.
 - The pipeline always reflects what is happening: an OBSERVING row lights Error/Triage before a ticket exists and
   becomes the ticket row in place.
 

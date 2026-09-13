@@ -80,6 +80,8 @@ class Settings(BaseSettings):
     # ECS names for the footer strip (GET /api/system); read with the task role, degrade gracefully locally.
     ecs_cluster: str = ""
     image_tag: str = ""
+    # The ops health poller (ECS/ALB/CloudWatch every 15 s). Off in tests.
+    ops_poll: bool = True
 
     board_url: str = ""
     platform_url: str = ""

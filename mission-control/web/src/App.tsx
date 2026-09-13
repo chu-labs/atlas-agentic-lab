@@ -3,14 +3,12 @@ import { Board } from "./Board";
 import { CiCd } from "./CiCd";
 import { Dora } from "./Dora";
 import { Drawer } from "./Drawer";
-import { Fleet } from "./Fleet";
+import { Engineering } from "./Engineering";
 import { Footer } from "./Footer";
 import { Nav, VIEWS, type View } from "./Nav";
-import { Pipeline } from "./Pipeline";
-import { Queues } from "./Queues";
+import { Operations } from "./Ops";
 import { SignalStrip } from "./Signal";
 import { ThenVsNow } from "./ThenVsNow";
-import { Timeline } from "./Timeline";
 import { TopBar } from "./TopBar";
 import { STAGES, type Selection, type Stage } from "./types";
 import { useClock, useMission } from "./useMission";
@@ -18,14 +16,16 @@ import { useClock, useMission } from "./useMission";
 /** #board / #cicd / #dora pick a tab; #ATLAS-142/pr opens the drawer; #agent/forge, #issue/ATLAS-142; #compare. */
 function fromHash(): { view: View; sel: Selection | null; compare: boolean } {
   const h = decodeURIComponent(location.hash.replace(/^#/, ""));
-  const base = { view: "mission" as View, sel: null, compare: false };
+  const base = { view: "ops" as View, sel: null, compare: false };
   if (!h) return base;
-  if (h === "compare") return { ...base, compare: true };
+  if (h === "compare") return { ...base, compare: true, view: "eng" as View };
+  if (h === "mission") return { ...base, view: "eng" as View };
   if ((VIEWS.map((v) => v.id) as string[]).includes(h)) return { ...base, view: h as View };
-  if (h.startsWith("agent/")) return { ...base, sel: { kind: "agent", handle: h.slice(6) } };
+  if (h.startsWith("agent/")) return { ...base, view: "eng" as View, sel: { kind: "agent", handle: h.slice(6) } };
   if (h.startsWith("issue/")) return { ...base, view: "board", sel: { kind: "issue", key: h.slice(6) } };
+  if (h.startsWith("cluster/")) return { ...base, sel: { kind: "cluster", signature: h.slice(8) } };
   const [ticket, stage] = h.split("/");
-  if (ticket && stage && (STAGES as readonly string[]).includes(stage)) return { ...base, sel: { kind: "stage", ticket, stage: stage as Stage } };
+  if (ticket && stage && (STAGES as readonly string[]).includes(stage)) return { ...base, view: "eng" as View, sel: { kind: "stage", ticket, stage: stage as Stage } };
   return base;
 }
 
@@ -47,7 +47,7 @@ export default function App() {
   }, []);
   const go = useCallback((v: View) => {
     setView(v);
-    history.replaceState(null, "", v === "mission" ? "#" : `#${v}`);
+    history.replaceState(null, "", `#${v}`);
   }, []);
 
   useEffect(() => {
@@ -72,8 +72,10 @@ export default function App() {
   }
 
   const active = state.pipeline.find((r) => r.ticket === state.active_ticket) ?? state.pipeline.find((r) => !r.observing) ?? null;
+  const openClusters = state.signal.untracked_signatures + (state.signal.by_kind?.infra?.count ? 1 : 0);
   const badges: Partial<Record<View, string | number>> = {
-    mission: state.gate.awaiting ? `${state.gate.awaiting} waiting` : "",
+    ops: openClusters ? `${openClusters} live` : "",
+    eng: state.gate.awaiting ? `${state.gate.awaiting} waiting` : "",
     board: "",
     cicd: "",
     dora: "",
@@ -83,20 +85,13 @@ export default function App() {
     <div className={`app view-${view}`}>
       <TopBar mission={mission} now={now} compare={compare} onCompare={() => setCompare((v) => !v)} />
       <Nav view={view} onView={go} badges={badges} />
-      {view === "mission" && (
+      {view === "ops" && (
         <>
           <SignalStrip signal={state.signal} />
-          <Pipeline state={state} stateAt={stateAt} now={now} onSelect={setSelection} selected={selection} />
-          <div className="lower">
-            <Fleet fleet={state.fleet} onSelect={setSelection} selected={selection} />
-            <Timeline events={events} activeRow={active} rows={state.pipeline} onSelect={setSelection} />
-            <aside className="side">
-              <Queues state={state} />
-              <ThenVsNow state={state} stateAt={stateAt} now={now} row={active} />
-            </aside>
-          </div>
+          <Operations state={state} events={events} now={now} onSelect={setSelection} selected={selection} onGoEngineering={() => go("eng")} />
         </>
       )}
+      {view === "eng" && <Engineering state={state} stateAt={stateAt} events={events} now={now} onSelect={setSelection} selected={selection} toast={toast} />}
       {view === "board" && (
         <div className="page">
           <Board fleet={state.fleet} onSelect={setSelection} selected={selection} toast={toast} />

@@ -37,6 +37,10 @@ def start() -> list[threading.Thread]:
         t = threading.Thread(target=_sample_depths, name="sqs-depths", daemon=True)
         t.start()
         threads.append(t)
+    if s.ops_poll:
+        from . import ops
+
+        threads.append(ops.start_poller())
     return threads
 
 

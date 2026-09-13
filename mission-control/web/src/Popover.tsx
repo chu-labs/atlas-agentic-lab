@@ -16,17 +16,34 @@ export interface PopoverItem {
  */
 export function Popover({ anchor, items, onClose }: { anchor: HTMLElement; items: PopoverItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; up: boolean } | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; up: boolean; maxHeight: number } | null>(null);
   const [active, setActive] = useState(0);
 
   useLayoutEffect(() => {
     const place = () => {
       const r = anchor.getBoundingClientRect();
-      const h = ref.current?.offsetHeight ?? 320;
+      const M = 8; // never closer than this to a viewport edge
+      const natural = ref.current?.scrollHeight ?? 320;
       const w = ref.current?.offsetWidth ?? 280;
-      const up = r.bottom + h + 8 > window.innerHeight && r.top - h - 8 > 0;
-      const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
-      setPos({ top: up ? r.top - h - 6 : r.bottom + 6, left, up });
+      const below = window.innerHeight - r.bottom - 6 - M;
+      const above = r.top - 6 - M;
+      let up = false;
+      let maxHeight = natural;
+      let top: number;
+      if (natural <= below) {
+        top = r.bottom + 6;
+      } else if (natural <= above) {
+        up = true;
+        top = r.top - 6 - natural;
+      } else {
+        // neither side fits: pin inside the viewport on the roomier side and scroll internally
+        up = above > below;
+        maxHeight = Math.max(120, up ? above : below);
+        top = up ? Math.max(M, r.top - 6 - maxHeight) : r.bottom + 6;
+      }
+      top = Math.max(M, Math.min(top, window.innerHeight - M - Math.min(natural, maxHeight)));
+      const left = Math.max(M, Math.min(r.left, window.innerWidth - w - M));
+      setPos({ top, left, up, maxHeight });
     };
     place();
     const id = requestAnimationFrame(place);
@@ -82,7 +99,7 @@ export function Popover({ anchor, items, onClose }: { anchor: HTMLElement; items
       ref={ref}
       className={`popover ${pos?.up ? "popover-up" : ""}`}
       role="menu"
-      style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, visibility: pos ? "visible" : "hidden" }}
+      style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, maxHeight: pos?.maxHeight, visibility: pos ? "visible" : "hidden" }}
       onMouseDown={(e) => e.stopPropagation()}
     >
       {items.map((it, i) => {

@@ -146,6 +146,7 @@ class State:
             self.untracked: dict[str, dict] = {}  # signature -> bucket of errors no open ticket has claimed
             self.triage_since: datetime | None = None  # Scout started working before a ticket existed
             self.last_error_ts: datetime | None = None
+            self.sig_stats: dict[str, dict] = {}  # signature -> lifetime stats + recent samples, for the cluster table
             self.gate: dict = {"waiting": False, "pr": None, "ticket": None, "since": None}
             self.gate_notified: set[int] = set()
             self.telemetry: dict[str, dict] = {}  # ticket -> {"agents": {handle: {...}}}
@@ -274,10 +275,38 @@ class State:
         row["first_ts"] = min(row["first_ts"], ts)
         row["updated_ts"] = max(row["updated_ts"], ts)
 
+    @staticmethod
+    def error_kind(d: dict) -> str:
+        k = str(d.get("kind") or "crash").lower()
+        if k in {"infra", "infrastructure"}:
+            return "infra"
+        if k in {"business_rule", "business-rule", "businessrule"}:
+            return "business_rule"
+        if k in {"performance", "perf", "slow"}:
+            return "performance"
+        return "crash"
+
     def _record_error(self, d: dict, ts: datetime, sig: str | None) -> None:
         self.last_error_ts = max(self.last_error_ts or ts, ts)
-        self.errors.append({"ts": ts, "signature": sig, "message": d.get("message"), "endpoint": d.get("endpoint"),
+        kind = self.error_kind(d)
+        self.errors.append({"ts": ts, "signature": sig, "kind": kind, "message": d.get("message"), "endpoint": d.get("endpoint"),
                             "error_type": d.get("error_type"), "status_code": d.get("status_code"), "method": d.get("method")})
+        st = self.sig_stats.get(sig or "")
+        if st is None:
+            self.sig_stats[sig or ""] = st = {"signature": sig, "kind": kind, "count": 0, "first_ts": ts, "last_ts": ts, "impact": 0.0,
+                                              "endpoint": d.get("endpoint"), "method": d.get("method"), "error_type": d.get("error_type"),
+                                              "message": d.get("message"), "status_code": d.get("status_code"), "samples": []}
+        st["count"] += 1
+        st["first_ts"] = min(st["first_ts"], ts)
+        if ts >= st["last_ts"]:
+            st.update(last_ts=ts, message=d.get("message") or st["message"])
+        try:
+            st["impact"] += float(d.get("customer_impact") or 0) if not isinstance(d.get("customer_impact"), str) else 0.0
+        except (TypeError, ValueError):
+            pass
+        st["samples"] = ([{"ts": ts, "request_id": d.get("request_id"), "message": d.get("message"), "status_code": d.get("status_code"),
+                           "method": d.get("method"), "endpoint": d.get("endpoint"), "customer_impact": d.get("customer_impact"),
+                           "stack": (d.get("stack") or "")[-1500:] or None, "service": d.get("service")}] + st["samples"])[:3]
         cutoff = ts - SIGNAL_WINDOW
         if len(self.errors) > 5000 or (self.errors and self.errors[0]["ts"] < cutoff - SIGNAL_WINDOW):
             self.errors = [x for x in self.errors if x["ts"] >= cutoff]
@@ -330,7 +359,9 @@ class State:
             self._apply_telemetry(e, ticket)
 
             # --- pipeline ------------------------------------------------
-            if kind == "error.raised":
+            if kind == "infra.alert":
+                self._record_error({**d, "kind": "infra"}, ts, d.get("signature") or f"infra:{d.get('service')}:{d.get('rule')}")
+            elif kind == "error.raised":
                 sig = error_signature(d)
                 root = root_key(d)
                 self._record_error(d, ts, sig)
@@ -597,7 +628,22 @@ class State:
             latest = max(self.untracked.values(), key=lambda b: b["last_ts"], default=None)
             last_minute = sum(1 for x in self.errors if (now - x["ts"]).total_seconds() < 60)
             last_error = max((x["ts"] for x in self.errors), default=self.last_error_ts)
+            by_kind: dict[str, dict] = {}
+            for k in ("crash", "business_rule", "performance", "infra"):
+                by_kind[k] = {"count": 0, "rate": [0] * n, "last_ts": None}
+            for x in self.errors:
+                k = x.get("kind") or "crash"
+                b = by_kind.setdefault(k, {"count": 0, "rate": [0] * n, "last_ts": None})
+                b["count"] += 1
+                i = int((now - x["ts"]).total_seconds() // SIGNAL_BUCKET)
+                if 0 <= i < n:
+                    b["rate"][n - 1 - i] += 1
+                if b["last_ts"] is None or x["ts"] > b["last_ts"]:
+                    b["last_ts"] = x["ts"]
+            for b in by_kind.values():
+                b["last_ts"] = iso(b["last_ts"])
             return {
+                "by_kind": by_kind,
                 "last_error_ts": iso(last_error),
                 "rate": buckets,
                 "bucket_seconds": SIGNAL_BUCKET,
@@ -661,6 +707,32 @@ class State:
                     "frozen": False,
                 },
             }
+
+    def clusters(self, now: datetime | None = None) -> list[dict]:
+        """One row per signature seen: kind, where, how much, and whether a ticket owns it (the ops table)."""
+        now = now or datetime.now(UTC)
+        with self.lock:
+            out = []
+            for sig, st in self.sig_stats.items():
+                owner = next((r for r in self.rows.values() if sig and (sig in r["signatures"] or sig == r.get("signature"))), None)
+                age = (now - st["last_ts"]).total_seconds()
+                if owner is not None:
+                    status = "resolved" if owner["stage"] == "closed" else "ticketed"
+                elif st["kind"] == "infra":
+                    status = "resolved" if age > 600 else "alerting"
+                else:
+                    status = "resolved" if age > SIGNAL_WINDOW.total_seconds() * 3 else "observing"
+                out.append({
+                    **{k: v for k, v in st.items() if k != "samples"},
+                    "first_ts": iso(st["first_ts"]), "last_ts": iso(st["last_ts"]), "status": status,
+                    "ticket": owner["ticket"] if owner else None, "stage": owner["stage"] if owner else None,
+                    "last_10m": sum(1 for x in self.errors if x["signature"] == sig),
+                    "samples": [{**smp, "ts": iso(smp["ts"])} for smp in st["samples"]],
+                })
+            order = {"alerting": 0, "observing": 1, "ticketed": 2, "resolved": 3}
+            out.sort(key=lambda c: (order.get(c["status"], 9), c["last_ts"] or ""), reverse=False)
+            out.sort(key=lambda c: order.get(c["status"], 9))
+            return out
 
     def snapshot(self, baselines: dict | None = None, now: datetime | None = None) -> dict:
         now = now or datetime.now(UTC)

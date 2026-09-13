@@ -19,6 +19,7 @@ os.environ["BASIC_AUTH_USER"] = ""
 os.environ["EVENT_BUS"] = ""
 os.environ["GITHUB_HUMAN_TOKEN"] = ""
 os.environ["QUEUE_URL_MISSION_EVENTS"] = ""
+os.environ["OPS_POLL"] = "0"
 for k in list(os.environ):
     if k.startswith("QUEUE_URL_"):
         os.environ.pop(k)

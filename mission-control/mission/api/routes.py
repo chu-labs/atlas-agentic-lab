@@ -6,7 +6,7 @@ import logging
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 
-from .. import board_proxy, cicd, dora, system
+from .. import board_proxy, cicd, dora, ops, system
 from ..bus import envelope, human_actor, publish
 from ..db import repo
 from ..db.pool import conn
@@ -235,3 +235,16 @@ def get_dora(window: str = Query("7d", pattern="^(24h|7d|all)$")):
 @router.get("/system")
 def get_system():
     return system.fetch()
+
+
+# ---------------- operations
+
+
+@router.get("/ops/health")
+def ops_health(refresh: bool = False):
+    return ops.fetch(force=refresh)
+
+
+@router.get("/ops/clusters")
+def ops_clusters():
+    return hub().state.clusters()

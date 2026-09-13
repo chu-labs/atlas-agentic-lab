@@ -55,6 +55,8 @@ export function Drawer({
           <StageDrawer selection={selection} state={state} events={events} now={now} onClose={onClose} onSelect={onSelect} />
         ) : selection.kind === "agent" ? (
           <AgentDrawer handle={selection.handle} state={state} events={events} now={now} onClose={onClose} />
+        ) : selection.kind === "cluster" ? (
+          <ClusterDrawer signature={selection.signature} state={state} onClose={onClose} onSelect={onSelect} />
         ) : (
           <IssueDrawer issueKey={selection.key} state={state} onClose={onClose} onSelect={onSelect} />
         )}
@@ -489,6 +491,56 @@ function IssueDrawer({ issueKey, state, onClose, onSelect }: { issueKey: string;
             </li>
           ))}
         </ol>
+      </section>
+    </>
+  );
+}
+
+// ----------------------------------------------------------------------------- cluster (ops)
+
+function ClusterDrawer({ signature, state, onClose, onSelect }: { signature: string; state: MissionState; onClose: () => void; onSelect: (s: Selection) => void }) {
+  const { data } = useFetch<Array<{ signature: string | null } & Record<string, unknown>>>("/api/ops/clusters", 5000);
+  const c = (data ?? []).find((x) => (x.signature ?? "") === signature) as
+    | (Record<string, unknown> & { samples?: { ts: string; request_id?: string; message?: string; status_code?: number; method?: string; endpoint?: string; customer_impact?: unknown; stack?: string | null }[] })
+    | undefined;
+  if (!c) return <DrawerHead title={signature} sub="loading…" onClose={onClose} />;
+  const row = state.pipeline.find((r) => r.ticket && r.ticket === c.ticket);
+  const status = str(c.status);
+  return (
+    <>
+      <DrawerHead title={`${str(c.error_type) || "cluster"} · ${str(c.kind).replace("_", " ")}`} sub={`${str(c.method)} ${str(c.endpoint)} — ${str(c.message)}`} onClose={onClose} tone={status === "alerting" ? "violet" : undefined} />
+      <div className="drawer-kpis">
+        <Kpi label="occurrences" value={fmtInt(Number(c.count))} sub={`${str(c.last_10m)} in the last 10 min`} />
+        <Kpi label="first seen" value={hms(str(c.first_ts))} />
+        <Kpi label="last seen" value={hms(str(c.last_ts))} />
+        <Kpi label="status" value={status === "ticketed" ? str(c.ticket) : status} tone={status === "ticketed" ? "amber" : undefined} sub={status === "ticketed" ? str(c.stage).replace("_", " ") : "customer impact " + (Number(c.impact) ? fmtInt(Number(c.impact)) : "—")} />
+      </div>
+      <section className="drawer-section">
+        <h3>Signature</h3>
+        <code>{signature}</code>
+        {row && (
+          <p>
+            <button className="linkish" onClick={() => onSelect({ kind: "stage", ticket: row.ticket!, stage: row.stage })}>
+              open {row.ticket} in the pipeline →
+            </button>
+          </p>
+        )}
+      </section>
+      <section className="drawer-section">
+        <h3>Recent samples</h3>
+        {(c.samples ?? []).map((s, i) => (
+          <div key={i} className="sample">
+            <div className="sample-head">
+              <span className="prose-time">{hms(s.ts)}</span>
+              <span className="mono">{s.status_code} {s.method} {s.endpoint}</span>
+              {s.request_id && <code>{s.request_id}</code>}
+              {s.customer_impact != null && <span className="muted small">impact {str(s.customer_impact)}</span>}
+            </div>
+            <div className="sample-msg">{s.message}</div>
+            {s.stack && <pre className="md-code">{s.stack}</pre>}
+          </div>
+        ))}
+        {(c.samples ?? []).length === 0 && <p className="muted">No samples kept.</p>}
       </section>
     </>
   );

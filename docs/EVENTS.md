@@ -35,6 +35,8 @@ plus type-specific fields.
 | atlas.mission-control | human.approved / human.rejected / human.gate_waiting | pr, waited_seconds | conductor (approved), mission |
 | atlas.github | deploy.completed / pr.merged | repo, service, sha, image, run_id, actor | conductor, mission |
 | atlas.conductor | agent.status / verify.passed / verify.failed / ticket.closed | pr, smoke {ok, checks}, signature_seen_after_deploy | mission |
+| atlas.ops | infra.alert | service, rule (unhealthy_hosts / elb_5xx / under_capacity / latency_p95), value, threshold, kind "infra", signature "infra:<service>:<rule>"; actor {handle ops, kind system, display_name "Ops monitor"}; emitted by Mission Control's health poller | watchtower, mission |
+| atlas.lab | defect.injected / lab.reset / chaos.injected / chaos.resolved | defect, sha, image, scenario, service; actor is the operator | mission |
 | atlas.workbench | workbench.dispatch / teammate.spawned / teammate.finished / converge.started / converge.done | role, worktree, branch, pane | forge (dispatch), mission |
 
 `agent.status` carries `status: idle | working | waiting_on_human | blocked | escalated` and `thinking`,

@@ -5,7 +5,7 @@ import { useTween } from "./useMission";
 /** A lane column: one of our eleven stages, or the traditional "backlog wait" that has no agentic counterpart. */
 export type LaneKey = Stage | "backlog_wait";
 export const LANE_KEYS: LaneKey[] = ["error", "triage", "ticket", "backlog_wait", "code", "test", "pr", "human_gate", "merge", "deploy", "verify", "closed"];
-const LANE_LABEL: Record<LaneKey, string> = { ...STAGE_LABEL, error: "Detect", human_gate: "Review", deploy: "Change approval", backlog_wait: "Backlog wait" };
+const LANE_LABEL: Record<LaneKey, string> = { ...STAGE_LABEL, error: "Detect", human_gate: "Review", deploy: "Approval", backlog_wait: "Backlog wait" };
 
 /** Traditional-SDLC calendar days per lane column, from the baselines' stage_days. */
 export function baselineDays(b: Baselines): Record<LaneKey, number> {
@@ -163,7 +163,7 @@ function Lane({
               style={{ flexGrow: grows[i] }}
               title={`${kind === "then" ? LANE_LABEL[p.s] : STAGE_LABEL[p.s as Stage]} ${p.label}`}
             >
-              {share >= 11 && <span className="lane-seg-label">{kind === "then" ? LANE_LABEL[p.s] : STAGE_LABEL[p.s as Stage]}</span>}
+              {share >= 17 && <span className="lane-seg-label">{kind === "then" ? LANE_LABEL[p.s] : STAGE_LABEL[p.s as Stage]}</span>}
               {share >= 7 && <span className="lane-seg-val">{p.label}</span>}
             </div>
           );

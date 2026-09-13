@@ -18,11 +18,11 @@ const STATUS_LABEL: Record<AgentStatus, string> = {
   escalated: "escalated",
 };
 
-export function Fleet({ fleet, onSelect, selected }: { fleet: FleetCard[]; onSelect: (s: Selection) => void; selected: Selection | null }) {
+export function Fleet({ fleet, onSelect, selected, title = "Fleet" }: { fleet: FleetCard[]; onSelect: (s: Selection) => void; selected: Selection | null; title?: string }) {
   return (
     <section className="fleet">
       <h2 className="panel-title">
-        Fleet <span className="count">{fleet.length}</span>
+        {title} <span className="count">{fleet.length}</span>
         <span className="panel-sub">{fleet.filter((c) => c.status !== "idle").length} active · click for reasoning</span>
       </h2>
       <div className="fleet-cards">

@@ -101,11 +101,13 @@ export function Timeline({
   activeRow,
   rows,
   onSelect,
+  title = "Timeline",
 }: {
   events: MissionEvent[];
   activeRow: PipelineRow | null;
   rows: PipelineRow[];
   onSelect: (s: Selection) => void;
+  title?: string;
 }) {
   const open = (e: MissionEvent) => {
     const row = rows.find((r) => belongsTo(e, r));
@@ -120,7 +122,7 @@ export function Timeline({
   return (
     <section className="timeline">
       <h2 className="panel-title">
-        Timeline <span className="count">{events.length}</span>
+        {title} <span className="count">{events.length}</span>
         <span className="panel-sub">{groups.length !== events.length ? `${groups.length} rows · repeats collapsed` : "newest first"}</span>
       </h2>
       <div className="timeline-list" ref={listRef}>

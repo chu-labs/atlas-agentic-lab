@@ -126,6 +126,7 @@ export interface Signal {
   } | null;
   triage_since: string | null;
   last_error_ts: string | null;
+  by_kind?: Record<string, { count: number; rate: number[]; last_ts: string | null }>;
 }
 
 export interface Gate {
@@ -179,7 +180,11 @@ export interface MissionState {
   links?: { board?: string; platform?: string; github?: string };
 }
 
-export type Selection = { kind: "stage"; ticket: string; stage: Stage } | { kind: "agent"; handle: string } | { kind: "issue"; key: string };
+export type Selection =
+  | { kind: "stage"; ticket: string; stage: Stage }
+  | { kind: "agent"; handle: string }
+  | { kind: "issue"; key: string }
+  | { kind: "cluster"; signature: string };
 
 export interface MissionEvent {
   id: number;
