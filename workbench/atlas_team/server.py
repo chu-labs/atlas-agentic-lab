@@ -152,7 +152,11 @@ def converge_branches(ticket: str, into: str | None = None) -> str:
             return "\n".join(report)
         report.append(f"merged {t['branch']}")
     tests = subprocess.run(["uv", "run", "pytest", "-q", "-p", "no:cacheprovider"], cwd=repo, capture_output=True, text=True)
-    report.append("tests: " + (tests.stdout.strip().splitlines() or ["?"])[-1])
+    lines = tests.stdout.strip().splitlines() or ["?"]
+    if tests.returncode == 0:
+        report.append("tests: " + lines[-1])
+    else:
+        report.append("tests FAILED on the converged branch; the teammates' work does not fit together yet. Resolve this in " + str(repo) + " before opening a PR:\n" + "\n".join(lines[-25:]))
     _emit_converge(ticket, f"Converged {len(report) - 2} branches into {target}; " + report[-1], conflict=False)
     return "\n".join(report)
 
