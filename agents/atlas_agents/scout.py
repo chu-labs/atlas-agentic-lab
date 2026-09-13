@@ -32,6 +32,7 @@ class Cluster:
     first_seen: float = field(default_factory=time.time)
     ticket: str | None = None
     last_update_count: int = 0
+    signatures: set[str] = field(default_factory=set)
 
     @property
     def recent(self) -> list[dict]:
@@ -91,7 +92,18 @@ class Agent(base.Agent):
         self._track_rate()
         if c.ticket is None:
             c.ticket = self._existing_ticket(c.signature)
+        sig = detail.get("signature")
+        new_sig = bool(sig) and sig not in c.signatures
+        if sig:
+            c.signatures.add(sig)
         if c.ticket:
+            if new_sig:
+                self.emitter.emit("incident.attached", c.ticket, f"Same root cause seen from {detail.get('endpoint')}; attached to {c.ticket}",
+                                  signature=sig, cluster=c.signature, endpoint=detail.get("endpoint"))
+                try:
+                    self.board.comment(c.ticket, f"Also reaching this from `{detail.get('method')} {detail.get('endpoint')}` (`{sig}`): same failing code path, same fix.")
+                except Exception:
+                    log.exception("board comment failed")
             self._update_existing(c)
             return
         kind = detail.get("kind", "crash")
@@ -217,7 +229,7 @@ class Agent(base.Agent):
             "incident.opened",
             key,
             f"Opened {key}: {out['title']}",
-            incident={"signature": c.signature, "count": len(c.events), "first_seen": sample.get("ts"), "customer_impact": c.impact},
+            incident={"signature": sample.get("signature"), "signatures": sorted(c.signatures), "cluster": c.signature, "count": len(c.events), "first_seen": sample.get("ts"), "customer_impact": c.impact},
             issue={"key": key, "title": out["title"], "priority": out.get("priority"), "type": "Bug"},
         )
         self.emitter.status("idle", f"Ticketed {key}. Back to watching the queue.", ticket=key)
