@@ -28,3 +28,6 @@ workbench/.venv/
 board/.venv/
 board/web/node_modules/
 board/web/dist/
+mission-control/.venv/
+mission-control/web/node_modules/
+mission-control/web/dist/

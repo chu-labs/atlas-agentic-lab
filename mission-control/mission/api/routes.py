@@ -1,0 +1,153 @@
+"""HTTP routes. Thin: read the hub, or ask it to do one thing, and return JSON."""
+from __future__ import annotations
+
+import logging
+
+import httpx
+from fastapi import APIRouter, HTTPException, Query
+
+from ..bus import envelope, human_actor, publish
+from ..db import repo
+from ..db.pool import conn
+from ..github_human import HumanGitHub
+from ..hub import hub
+from ..settings import settings
+from .auth import WS_TOKEN_TTL, make_ws_token
+from .schemas import GateApproveIn, GateRejectIn, InjectIn, RecordingIn, ReplayIn
+
+log = logging.getLogger(__name__)
+router = APIRouter(prefix="/api")
+
+
+# ---------------------------------------------------------------- state / events
+
+
+@router.get("/state")
+def get_state():
+    s = settings()
+    return {
+        **hub().snapshot(),
+        "links": {"board": s.board_url, "platform": s.platform_url},
+        "human": {"login": s.github_human_login, "display_name": s.github_human_display_name, "configured": bool(s.github_human_token)},
+    }
+
+
+@router.get("/events")
+def get_events(after: int = Query(0, ge=0), limit: int = Query(500, ge=1, le=2000)):
+    with conn() as c:
+        rows = repo.events_after(c, after, limit)
+    return [repo.serialise_event(r) for r in rows]
+
+
+@router.get("/ws-token")
+def ws_token():
+    return {"token": make_ws_token(), "ttl": WS_TOKEN_TTL}
+
+
+# ---------------------------------------------------------------- the human gate
+
+
+def _gh_or_503() -> HumanGitHub:
+    gh = HumanGitHub()
+    if not gh.configured:
+        raise HTTPException(503, "GITHUB_HUMAN_TOKEN is not set: Mission Control cannot act as the human on GitHub")
+    return gh
+
+
+def _gate_context(pr: int) -> tuple[str | None, dict | None, float]:
+    snap = hub().snapshot()
+    gate = snap["gate"]
+    if gate.get("pr") and gate["pr"].get("number") == pr:
+        return gate.get("ticket"), gate["pr"], float(gate.get("waited_seconds") or 0)
+    for row in snap["pipeline"]:
+        if row.get("pr") and row["pr"].get("number") == pr:
+            return row["ticket"], row["pr"], 0.0
+    return None, {"number": pr}, 0.0
+
+
+@router.post("/gate/approve")
+def gate_approve(body: GateApproveIn):
+    gh = _gh_or_503()
+    ticket, pr, waited = _gate_context(body.pr)
+    try:
+        sha = gh.approve_and_merge(body.pr)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(502, f"GitHub refused: {e.response.status_code} {e.response.text[:200]}") from e
+    except httpx.HTTPError as e:
+        raise HTTPException(502, f"GitHub unreachable: {e}") from e
+    publish(
+        "human.approved",
+        envelope(
+            human_actor(), ticket,
+            f"{settings().github_human_display_name} approved and merged PR #{body.pr} after waiting {int(waited)}s",
+            pr={**pr, "merge_sha": sha}, waited_seconds=int(waited),
+        ),
+    )
+    return {"ok": True, "pr": body.pr, "ticket": ticket, "merge_sha": sha, "waited_seconds": int(waited)}
+
+
+@router.post("/gate/reject")
+def gate_reject(body: GateRejectIn):
+    gh = _gh_or_503()
+    ticket, pr, waited = _gate_context(body.pr)
+    try:
+        gh.reject(body.pr, body.reason)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(502, f"GitHub refused: {e.response.status_code} {e.response.text[:200]}") from e
+    except httpx.HTTPError as e:
+        raise HTTPException(502, f"GitHub unreachable: {e}") from e
+    publish(
+        "human.rejected",
+        envelope(
+            human_actor(), ticket,
+            f"{settings().github_human_display_name} rejected PR #{body.pr}: {body.reason[:140]}",
+            pr=pr, reason=body.reason, waited_seconds=int(waited),
+        ),
+    )
+    return {"ok": True, "pr": body.pr, "ticket": ticket, "waited_seconds": int(waited)}
+
+
+# ---------------------------------------------------------------- recordings / replay
+
+
+@router.get("/recordings")
+def list_recordings():
+    with conn() as c:
+        return [repo.serialise_event(r) for r in repo.list_recordings(c)]
+
+
+@router.post("/recordings", status_code=201)
+def save_recording(body: RecordingIn):
+    return hub().record(body.name, body.since_event_id)
+
+
+@router.delete("/recordings/{name}")
+def delete_recording(name: str):
+    with conn() as c:
+        if not repo.delete_recording(c, name):
+            raise HTTPException(404, f"no recording named {name}")
+    return {"ok": True}
+
+
+@router.post("/replay", status_code=202)
+def replay(body: ReplayIn):
+    try:
+        n = hub().replay(body.name, body.speed)
+    except KeyError as e:
+        raise HTTPException(404, f"no recording named {body.name}") from e
+    return {"ok": True, "name": body.name, "speed": body.speed, "events": n}
+
+
+# ---------------------------------------------------------------- admin
+
+
+@router.post("/admin/reset")
+def admin_reset():
+    hub().reset()
+    return {"ok": True}
+
+
+@router.post("/admin/inject", status_code=201)
+def admin_inject(body: InjectIn):
+    out = [hub().ingest(raw) for raw in body.as_events()]
+    return {"ok": True, "ingested": len(out), "last_event_id": out[-1]["id"] if out else None}
