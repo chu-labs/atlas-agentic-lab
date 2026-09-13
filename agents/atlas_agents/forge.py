@@ -41,6 +41,10 @@ Find the code paths involved and form a root-cause hypothesis. Then decide hones
 - "escalate": the ticket asks for a different business outcome (rates, loadings, thresholds, windows, risk
   weights), is ambiguous, needs a data migration or schema change, has security impact, or otherwise falls
   under must_escalate_when. Changing a deliberate rule to satisfy a complaint is not a bug fix.
+Two things are NOT grounds to escalate: (a) a recent commit that broke behaviour CLAUDE.md or a docstring
+documents as intent, even if that commit also removed the test guarding it (that is a regression; fix it and
+restore the test); (b) an existing control or reconciliation endpoint disagreeing with the code (the control
+documents the intent). Escalate only when the *desired* behaviour is genuinely undecided or is a policy value.
 
 Think out loud in short plain-English paragraphs as you go; a human audience reads them live.
 End your reply with exactly one JSON object:
