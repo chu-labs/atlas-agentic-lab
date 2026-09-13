@@ -111,7 +111,8 @@ class Hub:
             with conn() as c:
                 row = repo.insert_event(c, e)
             stored = self._from_row(row)
-            followups = self.state.apply(stored)
+            # Replay is pure playback: the recording already holds our own follow-ups.
+            followups = self.state.apply(stored, emit=not replay)
         public = repo.serialise_event(row)
         self.broadcaster.send({"type": "event", "event": public})
         self.broadcaster.send(self.state_message())

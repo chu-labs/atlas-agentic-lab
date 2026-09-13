@@ -58,7 +58,7 @@ export function useMission(): Mission {
   useEffect(() => {
     let alive = true;
     let ws: WebSocket | null = null;
-    let backoff = 1000;
+    let backoff = 500;
     let reconnectTimer: number | null = null;
     let pollTimer: number | null = null;
 
@@ -118,7 +118,7 @@ export function useMission(): Mission {
       }
       ws.onopen = () => {
         if (!alive) return;
-        backoff = 1000;
+        backoff = 500;
         stopPolling();
         setTransport("ws");
         setConnected(true);
@@ -148,7 +148,7 @@ export function useMission(): Mission {
       if (reconnectTimer || !alive) return;
       reconnectTimer = window.setTimeout(() => {
         reconnectTimer = null;
-        backoff = Math.min(backoff * 2, 15000);
+        backoff = Math.min(backoff * 2, 2000);
         void connect();
       }, backoff);
     };

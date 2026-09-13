@@ -82,6 +82,29 @@ def test_recording_round_trip(client):
     assert client.delete("/api/recordings/t-rec").status_code == 404
 
 
+def test_replay_is_pure_playback(client):
+    """A recording that already contains human.gate_waiting must not grow a second one on replay."""
+    for _, raw in SCRIPT[:9]:  # through review.posted -> the hub emits human.gate_waiting itself
+        client.post("/api/admin/inject", json=raw)
+    types = [e["detail_type"] for e in client.get("/api/events").json()]
+    assert types.count("human.gate_waiting") == 1
+    client.post("/api/recordings", json={"name": "gate-rec", "since_event_id": 0})
+    client.post("/api/admin/reset")
+    client.post("/api/replay", json={"name": "gate-rec", "speed": 1000})
+    deadline = time.time() + 10
+    events = []
+    while time.time() < deadline and len(events) < 10:
+        time.sleep(0.1)
+        events = client.get("/api/events").json()
+    time.sleep(0.3)  # anything spurious would land right after the last replayed event
+    events = client.get("/api/events").json()
+    types = [e["detail_type"] for e in events]
+    assert len(events) == 10 and types.count("human.gate_waiting") == 1
+    assert all(e["replay"] for e in events)
+    assert client.get("/api/state").json()["gate"]["waiting"] is True  # state still derived from the replayed events
+    client.delete("/api/recordings/gate-rec")
+
+
 def test_ws_token_validation(client):
     tok = client.get("/api/ws-token").json()["token"]
     assert verify_ws_token(tok)
