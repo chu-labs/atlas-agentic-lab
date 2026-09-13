@@ -8,7 +8,7 @@ resource "aws_lb" "lab" {
 
 resource "aws_lb_target_group" "web" {
   for_each    = local.web_services
-  name        = "${local.name}-${each.key}"
+  name        = "atlas-lab-${each.key}"
   port        = each.value.container_port
   protocol    = "HTTP"
   target_type = "ip"

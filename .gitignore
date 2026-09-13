@@ -23,3 +23,4 @@ dist/
 recordings/*.mp4
 # os
 .DS_Store
+labctl/.venv/
