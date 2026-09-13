@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     github_repo: str = "atlas-platform"
     github_human_token: str = ""
     github_human_login: str = ""
+    board_actor: str = "maroun"  # the board handle the dashboard acts as (GitHub login is not a board user)
     github_human_display_name: str = "Maroun"
     # ECS names for the footer strip (GET /api/system); read with the task role, degrade gracefully locally.
     ecs_cluster: str = ""

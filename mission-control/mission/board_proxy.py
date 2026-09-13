@@ -1,6 +1,6 @@
 """Thin proxy to atlas-board so the presenter can file and assign work from Mission Control.
 
-Every call goes out as the human (X-Actor = GITHUB_HUMAN_LOGIN or "maroun") with the lab's basic
+Every call goes out as the human (X-Actor = BOARD_ACTOR, default "maroun") with the lab's basic
 auth. Assigning an issue to Forge is what puts it on Forge's queue: the board emits issue.assigned.
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ transport: httpx.BaseTransport | None = None  # tests inject an httpx.MockTransp
 
 
 def actor() -> str:
-    return settings().github_human_login or "maroun"
+    return settings().board_actor or "maroun"
 
 
 def client() -> httpx.Client:
