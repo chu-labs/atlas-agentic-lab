@@ -15,7 +15,11 @@ from .fleet import FLEET, TEAMMATE_AVATARS
 STAGES = ["error", "triage", "ticket", "code", "test", "pr", "human_gate", "merge", "deploy", "verify", "closed"]
 ORDER = {s: i for i, s in enumerate(STAGES)}
 TELEMETRY_FIELDS = ("tokens_in", "tokens_out", "model_calls", "seconds", "usd")
-PENDING = "__pending__"  # the pipeline row for an error no ticket has claimed yet
+PENDING = "__pending__"  # prefix of pipeline rows for errors no ticket has claimed yet (one per signature)
+
+
+def is_pending(key: str) -> bool:
+    return key.startswith(PENDING)
 
 
 def parse_ts(value: Any) -> datetime:
@@ -85,7 +89,7 @@ class State:
 
     # ------------------------------------------------------------ helpers
 
-    def _row(self, ticket: str, ts: datetime, title: str | None = None) -> dict:
+    def _row(self, ticket: str, ts: datetime, title: str | None = None, signature: str | None = None) -> dict:
         row = self.rows.get(ticket)
         if row is None:
             row = {
@@ -102,15 +106,32 @@ class State:
                 "pr_ts": None,
                 "closed_ts": None,
             }
-            pending = self.rows.pop(PENDING, None)
-            if pending:  # the error(s) that started all this belong to this ticket
-                row["stages"].update(pending["stages"])
-                row["first_ts"] = pending["first_ts"]
-                row["error"] = pending.get("error")
+            self._attach_pending(row, signature)
             self.rows[ticket] = row
         if title and not row["title"]:
             row["title"] = title
         return row
+
+    def _pending_rows(self) -> list[dict]:
+        return [r for k, r in self.rows.items() if is_pending(k)]
+
+    def _attach_pending(self, row: dict, signature: str | None) -> None:
+        """Fold every unattached error row with this signature into the new ticket row.
+
+        With no signature on the incident, every pending row is taken: the errors that started
+        all this belong to this ticket.
+        """
+        keys = [k for k, r in self.rows.items() if is_pending(k) and (signature is None or r["error"]["signature"] == signature)]
+        if not keys:
+            return
+        taken = [self.rows.pop(k) for k in keys]
+        for p in taken:
+            for stage, ts in p["stages"].items():
+                if stage not in row["stages"] or ts < row["stages"][stage]:
+                    row["stages"][stage] = ts
+            row["first_ts"] = min(row["first_ts"], p["first_ts"])
+        first = min(taken, key=lambda p: p["first_ts"])
+        row["error"] = {**first["error"], "count": sum(p["error"]["count"] for p in taken)}
 
     @staticmethod
     def _enter(row: dict, stage: str, ts: datetime, *, back: bool = False) -> None:
@@ -130,7 +151,7 @@ class State:
                     return row["ticket"]
         if e["detail_type"] in {"deploy.completed", "pr.merged", "verify.passed", "verify.failed", "ticket.closed"}:
             candidates = [
-                r for k, r in self.rows.items() if k != PENDING and r["stage"] != "closed" and ORDER[r["stage"]] >= ORDER["pr"]
+                r for k, r in self.rows.items() if not is_pending(k) and r["stage"] != "closed" and ORDER[r["stage"]] >= ORDER["pr"]
             ]
             if candidates:
                 return max(candidates, key=lambda r: r["updated_ts"])["ticket"]
@@ -157,9 +178,16 @@ class State:
 
             # --- pipeline ------------------------------------------------
             if kind == "error.raised":
-                row = self.rows.get(PENDING)
+                sig = d.get("signature")
+                row = next(
+                    (
+                        r for k, r in self.rows.items()
+                        if not is_pending(k) and r["stage"] != "closed" and (r.get("error") or {}).get("signature") == sig
+                    ),
+                    None,
+                ) or self.rows.get(f"{PENDING}{sig or ''}")
                 if row is None:
-                    self.rows[PENDING] = row = {
+                    self.rows[f"{PENDING}{sig or ''}"] = row = {
                         "ticket": None,
                         "title": d.get("message") or d.get("error_type") or "Production error",
                         "stage": "error",
@@ -169,18 +197,18 @@ class State:
                         "pr": None,
                         "first_ts": ts,
                         "updated_ts": ts,
-                        "error": {"signature": d.get("signature"), "endpoint": d.get("endpoint"), "count": 0},
+                        "error": {"signature": sig, "endpoint": d.get("endpoint"), "count": 0},
                     }
                 row["error"]["count"] += 1
-                row["updated_ts"] = ts
+                row["updated_ts"] = max(row["updated_ts"], ts)
             elif src == "atlas.scout" and kind == "agent.status" and d.get("status") == "working" and not ticket:
-                row = self.rows.get(PENDING)
-                if row:
+                for row in self._pending_rows():
                     self._enter(row, "triage", ts)
                     row["updated_ts"] = ts
             elif kind in {"incident.opened", "issue.created"} and ticket:
                 issue = d.get("issue") or {}
-                row = self._row(ticket, ts, issue.get("title"))
+                signature = (d.get("incident") or {}).get("signature") or (d.get("issue") or {}).get("signature")
+                row = self._row(ticket, ts, issue.get("title"), signature)
                 if src == "atlas.scout":
                     row["stages"].setdefault("triage", ts)
                 self._enter(row, "ticket", ts)
@@ -315,7 +343,7 @@ class State:
 
     def active_ticket(self) -> str | None:
         with self.lock:
-            open_rows = [r for k, r in self.rows.items() if k != PENDING and r["stage"] != "closed"]
+            open_rows = [r for k, r in self.rows.items() if not is_pending(k) and r["stage"] != "closed"]
             if not open_rows:
                 return None
             return max(open_rows, key=lambda r: r["updated_ts"])["ticket"]

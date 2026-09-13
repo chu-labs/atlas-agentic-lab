@@ -93,3 +93,42 @@ def test_escalation_is_terminal_and_teammates_come_and_go():
     st.apply(normalise(ev("atlas.workbench", "teammate.finished", 90, None, "ATLAS-142", "Tester done", role="tester")))
     assert "teammate:tester" not in {c["handle"] for c in st.snapshot()["fleet"]}
     assert len(st.snapshot()["fleet"]) == 5
+
+
+def test_repeat_errors_count_on_the_open_ticket_not_a_new_row():
+    st = State()
+    for i, (_, raw) in enumerate(SCRIPT[:4], start=1):  # two errors, triage, incident.opened
+        st.apply(normalise(raw, event_id=i))
+    assert st.snapshot()["pipeline"][0]["error"]["count"] == 2
+    # the same signature keeps arriving while Forge works: no stray "NEW ERROR" row
+    st.apply(normalise(ev("atlas.platform", "error.raised", 25, None, None, "500 again", signature="sig-1", message="x")))
+    st.apply(normalise(ev("atlas.platform", "error.raised", 26, None, None, "500 again", signature="sig-1", message="x")))
+    rows = st.snapshot()["pipeline"]
+    assert len(rows) == 1 and rows[0]["ticket"] == "ATLAS-142" and rows[0]["error"]["count"] == 4
+    # a different signature is a genuinely new error row
+    st.apply(normalise(ev("atlas.platform", "error.raised", 27, None, None, "boom", signature="sig-2", message="y")))
+    rows = st.snapshot()["pipeline"]
+    assert len(rows) == 2 and rows[0]["ticket"] is None and rows[0]["error"]["signature"] == "sig-2"
+    assert st.active_ticket() == "ATLAS-142"
+
+
+def test_incident_attaches_every_pending_row_with_its_signature():
+    st = State()
+    st.apply(normalise(ev("atlas.platform", "error.raised", 0, None, None, "a", signature="sig-A", message="a")))
+    st.apply(normalise(ev("atlas.platform", "error.raised", 1, None, None, "b", signature="sig-B", message="b")))
+    st.apply(normalise(ev("atlas.platform", "error.raised", 2, None, None, "a", signature="sig-A", message="a")))
+    assert len(st.snapshot()["pipeline"]) == 2  # one pending row per signature
+    st.apply(normalise(ev("atlas.scout", "agent.status", 3, agent("scout"), None, "triaging", status="working", thinking="hmm")))
+    assert all(r["stage"] == "triage" for r in st.snapshot()["pipeline"])
+    st.apply(normalise(ev("atlas.scout", "incident.opened", 10, agent("scout"), "ATLAS-7", "Opened ATLAS-7",
+                          incident={"signature": "sig-A", "count": 2}, issue={"key": "ATLAS-7", "title": "A"})))
+    rows = {r["ticket"]: r for r in st.snapshot()["pipeline"]}
+    assert set(rows) == {"ATLAS-7", None}
+    assert rows["ATLAS-7"]["error"] == {"signature": "sig-A", "endpoint": None, "count": 2}
+    assert rows["ATLAS-7"]["stages"]["error"].startswith("2026-09-17T10:00:00")  # earliest sig-A error
+    assert rows[None]["error"]["signature"] == "sig-B" and rows[None]["stage"] == "triage"
+    # sig-B's own ticket takes the remaining pending row and nothing is left behind
+    st.apply(normalise(ev("atlas.scout", "incident.opened", 20, agent("scout"), "ATLAS-8", "Opened ATLAS-8",
+                          incident={"signature": "sig-B", "count": 1}, issue={"key": "ATLAS-8", "title": "B"})))
+    rows = {r["ticket"]: r for r in st.snapshot()["pipeline"]}
+    assert set(rows) == {"ATLAS-7", "ATLAS-8"} and rows["ATLAS-8"]["error"]["count"] == 1
