@@ -23,8 +23,8 @@ class FakeECS:
 
 
 class FakeELB:
-    def __init__(self, unhealthy=0):
-        self.unhealthy = unhealthy
+    def __init__(self, unhealthy=0, only="atlas-platform"):
+        self.unhealthy, self.only = unhealthy, only  # unhealthy targets only behind `only`'s target group
 
     def describe_target_groups(self):
         return {"TargetGroups": [{"TargetGroupName": f"atlas-agentic-lab-{n}", "TargetGroupArn": f"arn:aws:elasticloadbalancing:ap-southeast-2:1:targetgroup/atlas-agentic-lab-{n}/abc"} for n in ops.SERVICES]}
@@ -33,7 +33,8 @@ class FakeELB:
         return {"LoadBalancers": [{"LoadBalancerName": "atlas-agentic-lab", "LoadBalancerArn": "arn:aws:elasticloadbalancing:ap-southeast-2:1:loadbalancer/app/atlas-agentic-lab/def"}]}
 
     def describe_target_health(self, TargetGroupArn):
-        return {"TargetHealthDescriptions": [{"TargetHealth": {"State": "healthy"}}] + [{"TargetHealth": {"State": "unhealthy"}}] * self.unhealthy}
+        n = self.unhealthy if (self.only is None or self.only in TargetGroupArn) else 0
+        return {"TargetHealthDescriptions": [{"TargetHealth": {"State": "healthy"}}] + [{"TargetHealth": {"State": "unhealthy"}}] * n}
 
 
 class FakeCW:
@@ -111,33 +112,91 @@ def test_health_degrades_without_aws(monkeypatch):
 
 
 def test_infra_alert_thresholds(monkeypatch):
-    ops._under_since.clear()
+    ops.reset_alert_state()
     monkeypatch.setattr(ops, "clients", _fake())
     quiet = ops.fetch(force=True)["services"]
-    assert ops.evaluate_alerts(quiet, now_s=1000) == []
+    assert ops.conditions(quiet, now_s=1000) == []
 
     monkeypatch.setattr(ops, "clients", _fake(ecs=FakeECS(running=0, desired=2), elb=FakeELB(unhealthy=1), cw=FakeCW(e5=6, p95=2.5, unh=1)))
     bad = ops.fetch(force=True)["services"]
-    rules = {(a["service"], a["rule"]) for a in ops.evaluate_alerts(bad, now_s=1000)}
-    assert ("atlas-platform", "unhealthy_hosts") in rules and ("atlas-platform", "elb_5xx") in rules and ("atlas-platform", "latency_p95") in rules
+    rules = {(a["service"], a["rule"]) for a in ops.conditions(bad, now_s=1000)}
+    assert ("atlas-platform", "unhealthy_hosts") in rules and ("atlas-platform", "latency_p95") in rules
+    assert ("alb", "elb_5xx") in rules and not any(r == "elb_5xx" and s != "alb" for s, r in rules)  # ELB-wide: once
     assert ("atlas-platform", "under_capacity") not in rules  # must persist for 30 s first
-    rules = {(a["service"], a["rule"]) for a in ops.evaluate_alerts(bad, now_s=1031)}
+    rules = {(a["service"], a["rule"]) for a in ops.conditions(bad, now_s=1031)}
     assert ("atlas-platform", "under_capacity") in rules
     # boundary: exactly 5 ELB 5xx and exactly 2 s p95 do not fire
     monkeypatch.setattr(ops, "clients", _fake(cw=FakeCW(e5=5, p95=2.0)))
-    assert ops.evaluate_alerts(ops.fetch(force=True)["services"], now_s=2000) == []
+    assert ops.conditions(ops.fetch(force=True)["services"], now_s=2000) == []
+
+
+def test_alerts_need_two_consecutive_polls_and_dedupe_alb(monkeypatch):
+    ops.reset_alert_state()
+    monkeypatch.setattr(ops, "clients", _fake(cw=FakeCW(e5=74)))
+    bad = ops.fetch(force=True)["services"]
+    assert ops.evaluate_alerts(bad, now_s=100) == []  # first sighting: not yet
+    fired = ops.evaluate_alerts(bad, now_s=115)
+    assert [(a["service"], a["rule"], a["confirmed_polls"]) for a in fired] == [("alb", "elb_5xx", 2)]
+    assert ops.alert_event(fired[0])["service_display"] == "Load balancer" and ops.alert_event(fired[0])["signature"] == "infra:alb:elb_5xx"
+    # a blip that clears resets the streak
+    monkeypatch.setattr(ops, "clients", _fake())
+    assert ops.evaluate_alerts(ops.fetch(force=True)["services"], now_s=130) == []
+    assert ops.evaluate_alerts(bad, now_s=145) == []
+
+
+class DeployingECS(FakeECS):
+    def __init__(self, rolling: bool, running=1, desired=1):
+        super().__init__(running=running, desired=desired)
+        self.rolling = rolling
+
+    def describe_services(self, cluster, services):
+        d = super().describe_services(cluster, services)
+        for sv in d["services"]:
+            if sv["serviceName"] == "atlas-platform":
+                sv["deployments"] = ([{"status": "PRIMARY", "rolloutState": "IN_PROGRESS"}, {"status": "ACTIVE", "rolloutState": "COMPLETED"}]
+                                     if self.rolling else [{"status": "PRIMARY", "rolloutState": "COMPLETED"}])
+        return d
+
+
+def test_our_own_deployments_do_not_alert(monkeypatch):
+    ops.reset_alert_state()
+    # rollout in progress on atlas-platform: its unhealthy target and the ALB-wide 5xx are ours
+    monkeypatch.setattr(ops, "clients", _fake(ecs=DeployingECS(rolling=True), elb=FakeELB(unhealthy=1), cw=FakeCW(e5=74)))
+    rolling = ops.fetch(force=True)["services"]
+    for t in (0, 15, 30):
+        assert ops.evaluate_alerts(rolling, now_s=t) == []
+    # rollout finished: 120 s of quiet, still nothing at +60 s and +100 s
+    monkeypatch.setattr(ops, "clients", _fake(ecs=DeployingECS(rolling=False), elb=FakeELB(unhealthy=1), cw=FakeCW(e5=74)))
+    done = ops.fetch(force=True)["services"]
+    assert ops.evaluate_alerts(done, now_s=45) == [] and ops.evaluate_alerts(done, now_s=105) == [] and ops.evaluate_alerts(done, now_s=145) == []
+    # quiet window over (45 + 120 = 165): conditions start counting again and confirm on the second poll
+    assert ops.evaluate_alerts(done, now_s=170) == []
+    fired = {(a["service"], a["rule"]) for a in ops.evaluate_alerts(done, now_s=185)}
+    assert fired == {("atlas-platform", "unhealthy_hosts"), ("alb", "elb_5xx")}
+
+
+def test_chaos_kill_task_still_alerts(monkeypatch):
+    """A task stopped outside a deployment: rollout COMPLETED, running < desired, one unhealthy target."""
+    ops.reset_alert_state()
+    monkeypatch.setattr(ops, "clients", _fake(ecs=DeployingECS(rolling=False, running=1, desired=2), elb=FakeELB(unhealthy=1)))
+    sv = ops.fetch(force=True)["services"]
+    assert ops.evaluate_alerts(sv, now_s=0) == []
+    assert {(a["service"], a["rule"]) for a in ops.evaluate_alerts(sv, now_s=15)} == {("atlas-platform", "unhealthy_hosts")}
+    ops.evaluate_alerts(sv, now_s=45)  # under_capacity first seen after 30 s
+    fired = {(a["service"], a["rule"]) for a in ops.evaluate_alerts(sv, now_s=60)}
+    assert ("atlas-platform", "under_capacity") in fired and ("atlas-platform", "unhealthy_hosts") in fired
 
 
 def test_poll_emits_alert_once_per_cooldown(monkeypatch):
-    ops._under_since.clear()
-    ops._last_alert.clear()
+    ops.reset_alert_state()
     monkeypatch.setattr(ops, "clients", _fake(cw=FakeCW(e5=9)))
     emitted: list[tuple[str, dict]] = []
+    assert ops.poll_once(lambda dt, d: emitted.append((dt, d)), now_s=4985) == []  # first sighting
     fired = ops.poll_once(lambda dt, d: emitted.append((dt, d)), now_s=5000)
-    assert [a["rule"] for a in fired] == ["elb_5xx"] * 3  # all three services share the ALB-level 5xx count
-    assert emitted[0][0] == "infra.alert" and emitted[0][1]["signature"] == "infra:atlas-platform:elb_5xx" and emitted[0][1]["kind"] == "infra"
+    assert [(a["service"], a["rule"]) for a in fired] == [("alb", "elb_5xx")]  # once, not per service
+    assert emitted[0][0] == "infra.alert" and emitted[0][1]["signature"] == "infra:alb:elb_5xx" and emitted[0][1]["kind"] == "infra"
     assert ops.poll_once(lambda dt, d: emitted.append((dt, d)), now_s=5100) == []  # cooldown
-    assert len(ops.poll_once(lambda dt, d: emitted.append((dt, d)), now_s=5400)) == 3
+    assert len(ops.poll_once(lambda dt, d: emitted.append((dt, d)), now_s=5400)) == 1
 
 
 def test_signal_by_kind_and_cluster_table():

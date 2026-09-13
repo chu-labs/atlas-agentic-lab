@@ -19,11 +19,22 @@ SERVICES = ["atlas-platform", "atlas-board", "mission-control"]
 CACHE_SECONDS = 15
 THRESHOLDS = {"elb_5xx_per_min": 5, "p95_ms": 2000, "under_capacity_seconds": 30}
 ALERT_COOLDOWN = 300.0
+DEPLOY_QUIET_SECONDS = 120.0  # after a rollout completes, its restarts and 5xx are still ours
+CONFIRM_POLLS = 2  # a condition must hold on this many consecutive evaluations
+ALB = "alb"  # the load-balancer-wide pseudo-service
 
 _cache: dict = {"at": 0.0, "data": None}
 _lock = threading.Lock()
 _under_since: dict[str, float] = {}  # service -> when running first dropped below desired
 _last_alert: dict[str, float] = {}  # service:rule -> last emitted
+_deploying: dict[str, bool] = {}  # service -> rollout in progress at the last evaluation
+_quiet_until: dict[str, float] = {}  # service -> end of the post-deploy quiet window
+_streak: dict[str, int] = {}  # service:rule -> consecutive evaluations the condition held
+
+
+def reset_alert_state() -> None:
+    for d in (_under_since, _last_alert, _deploying, _quiet_until, _streak):
+        d.clear()
 
 
 def _boto_clients() -> dict:
@@ -168,42 +179,86 @@ def _collect(c: dict, cluster: str, now: datetime) -> list[dict]:
     return out
 
 
-def evaluate_alerts(services: list[dict], now_s: float | None = None) -> list[dict]:
-    """The four rules. Under-capacity needs to persist for THRESHOLDS['under_capacity_seconds']."""
+def conditions(services: list[dict], now_s: float | None = None) -> list[dict]:
+    """Raw threshold breaches this instant. ELB 5xx is load-balancer-wide, so it is reported once as `alb`."""
     now_s = now_s if now_s is not None else time.time()
-    alerts: list[dict] = []
+    out: list[dict] = []
+    elb_5xx = 0.0
     for sv in services:
         name = sv["name"]
         m = sv.get("metrics") or {}
         t = sv.get("targets") or {}
+        elb_5xx = max(elb_5xx, float(m.get("elb_5xx_last_min") or 0))
         unhealthy = max(int(m.get("unhealthy_hosts") or 0), int(t.get("unhealthy") or 0))
         if unhealthy > 0:
-            alerts.append({"service": name, "rule": "unhealthy_hosts", "value": unhealthy, "threshold": 0,
-                           "summary": f"{name}: {unhealthy} unhealthy target{'s' if unhealthy != 1 else ''} behind the load balancer"})
-        e5 = float(m.get("elb_5xx_last_min") or 0)
-        if e5 > THRESHOLDS["elb_5xx_per_min"]:
-            alerts.append({"service": name, "rule": "elb_5xx", "value": e5, "threshold": THRESHOLDS["elb_5xx_per_min"],
-                           "summary": f"{name}: {int(e5)} ELB 5xx in the last minute"})
+            out.append({"service": name, "rule": "unhealthy_hosts", "value": unhealthy, "threshold": 0,
+                        "summary": f"{name}: {unhealthy} unhealthy target{'s' if unhealthy != 1 else ''} behind the load balancer"})
         p95 = float(m.get("p95_ms") or 0)
         if p95 > THRESHOLDS["p95_ms"]:
-            alerts.append({"service": name, "rule": "latency_p95", "value": p95, "threshold": THRESHOLDS["p95_ms"],
-                           "summary": f"{name}: p95 latency {p95 / 1000:.1f} s over the last 5 min"})
+            out.append({"service": name, "rule": "latency_p95", "value": p95, "threshold": THRESHOLDS["p95_ms"],
+                        "summary": f"{name}: p95 latency {p95 / 1000:.1f} s over the last 5 min"})
         desired, running = sv.get("desired"), sv.get("running")
         if desired is not None and running is not None and running < desired:
             since = _under_since.setdefault(name, now_s)
             if now_s - since > THRESHOLDS["under_capacity_seconds"]:
-                alerts.append({"service": name, "rule": "under_capacity", "value": running, "threshold": desired,
-                               "summary": f"{name}: {running} of {desired} tasks running for {int(now_s - since)} s"})
+                out.append({"service": name, "rule": "under_capacity", "value": running, "threshold": desired,
+                            "summary": f"{name}: {running} of {desired} tasks running for {int(now_s - since)} s"})
         else:
             _under_since.pop(name, None)
-    return alerts
+    if elb_5xx > THRESHOLDS["elb_5xx_per_min"]:
+        out.append({"service": ALB, "rule": "elb_5xx", "value": elb_5xx, "threshold": THRESHOLDS["elb_5xx_per_min"],
+                    "summary": f"Load balancer: {int(elb_5xx)} ELB 5xx in the last minute"})
+    return out
+
+
+def _update_deploy_windows(services: list[dict], now_s: float) -> set[str]:
+    """Services whose alerts are ours to ignore: rolling out now, or within DEPLOY_QUIET_SECONDS of finishing."""
+    quiet: set[str] = set()
+    for sv in services:
+        name = sv["name"]
+        rolling = bool((sv.get("deployment") or {}).get("in_progress"))
+        if rolling:
+            quiet.add(name)
+        elif _deploying.get(name):  # just finished
+            _quiet_until[name] = now_s + DEPLOY_QUIET_SECONDS
+        _deploying[name] = rolling
+        if now_s < _quiet_until.get(name, 0.0):
+            quiet.add(name)
+    return quiet
+
+
+def evaluate_alerts(services: list[dict], now_s: float | None = None) -> list[dict]:
+    """Conditions that survive the deploy windows and have held for CONFIRM_POLLS consecutive evaluations.
+
+    A task killed outside a deployment (labctl chaos kill-task) leaves rollout COMPLETED with running < desired,
+    so under_capacity and unhealthy_hosts still fire for it once confirmed.
+    """
+    now_s = now_s if now_s is not None else time.time()
+    quiet = _update_deploy_windows(services, now_s)
+    raw = conditions(services, now_s)
+    live_keys: set[str] = set()
+    out: list[dict] = []
+    for a in raw:
+        suppressed = (a["service"] in quiet) or (a["service"] == ALB and bool(quiet))
+        if suppressed:
+            continue
+        key = f"{a['service']}:{a['rule']}"
+        live_keys.add(key)
+        _streak[key] = _streak.get(key, 0) + 1
+        if _streak[key] >= CONFIRM_POLLS:
+            out.append({**a, "confirmed_polls": _streak[key], "deploy_quiet": sorted(quiet)})
+    for key in [k for k in _streak if k not in live_keys]:
+        _streak.pop(key, None)
+    return out
 
 
 def alert_event(a: dict) -> dict:
+    display = "Load balancer" if a["service"] == ALB else a["service"]
     return {
         "actor": {"handle": "ops", "kind": "system", "display_name": "Ops monitor", "mode": None},
-        "summary": a["summary"], "kind": "infra", "service": a["service"], "rule": a["rule"], "value": a["value"], "threshold": a["threshold"],
-        "signature": f"infra:{a['service']}:{a['rule']}", "endpoint": a["service"], "error_type": a["rule"], "message": a["summary"],
+        "summary": a["summary"], "kind": "infra", "service": a["service"], "service_display": display, "rule": a["rule"],
+        "value": a["value"], "threshold": a["threshold"], "signature": f"infra:{a['service']}:{a['rule']}",
+        "endpoint": display, "error_type": a["rule"], "message": a["summary"],
     }
 
 
