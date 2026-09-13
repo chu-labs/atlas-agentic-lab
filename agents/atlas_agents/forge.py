@@ -108,8 +108,15 @@ class Agent(base.Agent):
         if not self.guard("can_write_code", f"work on {key}", key):
             return
         issue = self.board.get(key)
-        if issue.get("pr_url") and issue.get("status") == "In Review":
-            log.info("already has a PR; skipping", extra={"ticket": key})
+        if issue.get("status") == "Done" or (issue.get("pr_url") and issue.get("status") == "In Review"):
+            log.info("ticket is done or already has a PR; skipping", extra={"ticket": key})
+            return
+        dup = self._duplicate_of(issue)
+        if dup:
+            self.think(key, f"This is the same failure as {dup['key']}, which already has a pull request open ({dup.get('pr_url')}). Closing this one as a duplicate rather than fixing it twice.")
+            self.board.comment(key, f"Duplicate of {dup['key']} (same failing code path). The fix is in {dup.get('pr_url')}.")
+            self.board.move(key, "Done")
+            self.emitter.emit("ticket.closed", key, f"Closed {key} as a duplicate of {dup['key']}", duplicate_of=dup["key"])
             return
         t0 = time.time()
         self.current_ticket = key
@@ -217,6 +224,18 @@ class Agent(base.Agent):
         prd = self.gh.pr(s["pr"])
         self.emitter.emit("pr.updated", key, f"Pushed rework to PR #{s['pr']}", pr={"number": s["pr"], "url": prd["html_url"], "branch": s["branch"], "title": prd["title"], "head_sha": prd["head"]["sha"]})
         self.emitter.status("waiting_on_review", "Rework pushed. Waiting for Sentinel again.", ticket=key)
+
+    def _duplicate_of(self, issue: dict) -> dict | None:
+        """Another open ticket for the same failing code path that already carries a PR."""
+        cluster = (issue.get("source") or {}).get("cluster")
+        if not cluster:
+            return None
+        for other in self.board.list_issues(label="production"):
+            if other["key"] == issue["key"] or other.get("status") == "Done":
+                continue
+            if (other.get("source") or {}).get("cluster") == cluster and other.get("pr_url"):
+                return other
+        return None
 
     # --- pieces -----------------------------------------------------------
     def _fresh_clone(self, key: str, branch: str) -> Path:

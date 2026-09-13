@@ -104,7 +104,7 @@ class Agent(base.Agent):
                "request changes asking for one specific additional test that would strengthen it." if strict and rnd == 1 else "")
         )
         try:
-            out = llm.ask_json(SYSTEM, prompt, emitter=self.emitter, ticket=key or f"pr-{number}", max_tokens=2500)
+            out = llm.ask_json(SYSTEM, prompt, emitter=self.emitter, ticket=key or f"pr-{number}", max_tokens=4000)
         except Exception:
             log.exception("llm review failed")
             out = {"verdict": "comment", "summary": "Model review unavailable; mechanical checks only.", "concerns": [], "reasoning": [], "strengths": []}

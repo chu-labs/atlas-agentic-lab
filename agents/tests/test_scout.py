@@ -65,3 +65,10 @@ def test_board_move_steps_forward(monkeypatch):
     monkeypatch.setattr(b, "get", lambda key: {"status": "In Review"})
     b.move("ATLAS-1", "In Progress")
     assert calls == ["In Progress"]
+
+
+def test_extract_json_tolerates_fences_and_prose():
+    from atlas_agents.llm import _extract_json
+
+    assert _extract_json('Here you go:\n```json\n{"a": 1, "b": {"c": [1,2]}}\n```\nthanks') == {"a": 1, "b": {"c": [1, 2]}}
+    assert _extract_json("no json at all") is None

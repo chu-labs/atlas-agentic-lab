@@ -40,7 +40,34 @@ def ask(system: str, user: str, *, emitter=None, ticket: str | None = None, max_
     return text
 
 
+def _extract_json(text: str) -> dict | None:
+    """The last complete JSON object in `text`, tolerating code fences and surrounding prose."""
+    text = text.replace("```json", "```").replace("```", "")
+    end = text.rfind("}")
+    if end == -1:
+        return None
+    depth = 0
+    for i in range(end, -1, -1):
+        if text[i] == "}":
+            depth += 1
+        elif text[i] == "{":
+            depth -= 1
+            if depth == 0:
+                try:
+                    return json.loads(text[i : end + 1])
+                except json.JSONDecodeError:
+                    return None
+    return None
+
+
 def ask_json(system: str, user: str, **kw) -> dict:
+    """Ask for a JSON object; retry once with a blunt reminder if the model answered in prose."""
     text = ask(system, user, json_mode=True, **kw)
-    start, end = text.find("{"), text.rfind("}")
-    return json.loads(text[start : end + 1])
+    out = _extract_json(text)
+    if out is None:
+        log.warning("model did not return JSON; retrying once", extra={"head": text[:200]})
+        text = ask(system, user + "\n\nYour previous reply was not a JSON object. Reply with ONLY the JSON object, no prose, no code fences.", json_mode=True, **kw)
+        out = _extract_json(text)
+    if out is None:
+        raise ValueError("model returned no JSON object: " + text[:300])
+    return out
