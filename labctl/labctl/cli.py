@@ -378,6 +378,46 @@ def leftovers():
     console.print(left or "[green]none[/]")
 
 
+@main.group()
+def demo():
+    """Scenario runner: kick off errors and watch the agents react, live, in this terminal."""
+
+
+@demo.command("run")
+@click.argument("defect_ids", nargs=-1, required=True)
+@click.option("--record", "record_name", default=None, help="Save the run as a named recording when it ends")
+@click.option("--workbench", is_flag=True, help="Supervised story: file a human ticket, no deploy")
+def demo_run(defect_ids, record_name, workbench):
+    """Inject one or more defects (see `labctl inject --list`) and stream the agents' events here."""
+    from . import demo as d
+
+    d.run(list(defect_ids), name=record_name, workbench=workbench)
+
+
+@demo.command("watch")
+@click.option("--since", type=int, default=None, help="Event id to start from (default: now)")
+def demo_watch(since):
+    """Just watch: stream Mission Control events to the terminal until a ticket closes or escalates."""
+    from . import demo as d
+
+    if since is None:
+        with d._client() as c:
+            since = d._last_event_id(c)
+    d.watch(since)
+
+
+@demo.command("storm")
+@click.option("--record", "record_name", default="storm-run")
+def demo_storm(record_name):
+    """Three defects at once with three Forge tasks: zero-lots, float-premium, n-plus-one."""
+    from . import demo as d
+    from . import ecs
+
+    ecs.scale("forge", 3)
+    console.print("forge scaled to 3")
+    d.run(["zero-lots", "float-premium", "n-plus-one"], name=record_name)
+
+
 @main.command()
 def outputs():
     """Show Terraform outputs the lab runs on."""

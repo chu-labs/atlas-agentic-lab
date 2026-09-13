@@ -71,7 +71,9 @@ def baseline_set(image: str | None = None, force: bool = False) -> dict:
 
 
 def inject(defect_id: str, no_deploy: bool = False, workbench: bool = False) -> dict:
-    d = get(defect_id)
+    """Inject one defect, or several joined with '+': one commit each, one build, one deploy."""
+    ids = defect_id.split("+")
+    d = get(ids[0])
     st = state.load()
     if not st.get("baseline_sha"):
         baseline_set()
@@ -80,6 +82,8 @@ def inject(defect_id: str, no_deploy: bool = False, workbench: bool = False) -> 
         return _inject_for_workbench(d, st)
     if st.get("injected"):
         raise SystemExit(f"{st['injected']['id']} is already injected; run `labctl reset` first")
+    if len(ids) > 1:
+        return _inject_many([get(i) for i in ids], no_deploy)
 
     if d.get("ticket"):  # the ambiguous one: a human files a ticket, no code changes
         t = d["ticket"]
@@ -156,6 +160,30 @@ def _inject_for_workbench(d: dict, st: dict) -> dict:
     key = _file_ticket(t, {"kind": "human_report", "defect": d["id"], "mode": "supervised"})
     bus.emit("defect.injected", f"Workbench: {t.get('reporter')} filed {key} ({t['title']}); defect on main, not deployed", defect=d["id"], ticket=key, sha=sha, mode="supervised")
     return state.save(workbench_injected={"id": d["id"], "ticket": key, "sha": sha, "at": time.time()})
+
+
+def _inject_many(ds: list[dict], no_deploy: bool) -> dict:
+    ensure_clone()
+    for d in ds:
+        if d.get("ticket"):
+            raise SystemExit(f"{d['id']} is a ticket-only defect; inject it on its own")
+        subprocess.run(["git", "apply", str(d["dir"] / d["patch"])], cwd=CLONE, check=True)
+        _git("add", "-A")
+        _git("commit", "--quiet", "-m", f"{d['commit_message']}\n\n[skip ci]")
+    sha = _git("rev-parse", "HEAD")
+    _git("push", "--quiet", "origin", "main")
+    for d in ds:
+        if d.get("data_sql"):
+            _run_sql((d["dir"] / d["data_sql"]).read_text())
+    image = None
+    if not no_deploy:
+        tag = f"defect-multi-{sha[:8]}"
+        image = ecs.build_and_push("atlas-platform", tag, context=CLONE)
+        arn = ecs.register_revision("atlas-platform", image)
+        ecs.rollout("atlas-platform", arn, desired=1, wait=True)
+    joined = "+".join(d["id"] for d in ds)
+    bus.emit("defect.injected", f"Injected {len(ds)} defects into production: {joined}", defect=joined, sha=sha, image=image)
+    return state.save(injected={"id": joined, "sha": sha, "image": image, "data": any(d.get("data_sql") for d in ds), "at": time.time()})
 
 
 def reset(reseed: bool | None = None) -> list[str]:
