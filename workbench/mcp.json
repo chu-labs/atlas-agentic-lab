@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "atlas-team": {
+      "command": "uv",
+      "args": ["run", "--project", "__WORKBENCH_DIR__", "atlas-team"],
+      "env": {}
+    }
+  }
+}

@@ -252,6 +252,30 @@ def baseline_show():
 
 
 @main.command()
+@click.option("--ticket", default=None, help="Ticket key shown in the status bar")
+@click.option("--reset", "do_reset", is_flag=True, help="Kill panes and worktrees and rebuild")
+@click.option("--no-attach", is_flag=True)
+def workbench(ticket, do_reset, no_attach):
+    """Build the projector-ready tmux layout (session 'atlas') with Claude Code in the main pane."""
+    import os
+
+    from . import workbench as wb
+    from .config import outputs as o
+
+    if do_reset:
+        wb.reset()
+        console.print("workbench reset")
+    extra = {}
+    try:
+        extra = {"EVENT_BUS": o().event_bus, "AWS_REGION": "ap-southeast-2", "AWS_PROFILE": os.environ.get("ATLAS_AWS_PROFILE", "chu-ai")}
+    except SystemExit:
+        pass
+    wb.build(ticket, attach=not no_attach, env_extra=extra)
+    if no_attach:
+        console.print("session 'atlas' ready: tmux attach -t atlas")
+
+
+@main.command()
 def outputs():
     """Show Terraform outputs the lab runs on."""
     from .config import outputs as o

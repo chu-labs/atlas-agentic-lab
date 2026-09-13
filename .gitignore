@@ -24,3 +24,4 @@ recordings/*.mp4
 # os
 .DS_Store
 labctl/.venv/
+workbench/.venv/
