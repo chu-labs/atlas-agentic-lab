@@ -9,6 +9,9 @@ Written to be followed under pressure. Every command runs from `atlas-agentic-la
 1. `tools/github_app_manifest.py` → create the GitHub App; install it on `chu-labs`; `tools/github_app_token.py --check`.
 2. `cd infra/terraform && terraform init && terraform plan -out=p && terraform apply p` (about 8 minutes, RDS is the long pole). Set `admin_cidr` in `terraform.tfvars` to your laptop's `/32`.
 3. `labctl secrets push --anthropic --github-app --basic-auth maroun maroun --github-human` (PAT and login from env or prompt).
+   The PAT is a fine-grained token on the owner's account, resource owner `chu-labs`, repo `atlas-platform`,
+   permissions: Contents **read and write** (merging needs it), Pull requests read/write, Actions read/write,
+   Deployments read/write. It is only ever read by Mission Control's Approve/Reject endpoints.
 4. `gh variable set AWS_DEPLOY_ROLE_ARN --repo chu-labs/atlas-platform --body "$(terraform output -raw gha_deploy_role_arn)"`.
 5. `labctl deploy atlas-platform && labctl db seed platform -- --buildings 2500`.
 6. `labctl deploy atlas-board && labctl db seed board`; `labctl deploy mission-control`.
@@ -44,6 +47,18 @@ labctl reset                      # back to clean in < 2 minutes
 Other defects: `labctl inject --list`. `ambiguous-high-rise` files a ticket instead of deploying code;
 Forge should escalate, not fix. `zero-lots` also flips three buildings to zero lots (reset reseeds).
 
+## 2a. Measured on 13 Sep 2026 (rehearsal 2, off-by-one)
+
+| Stage | Wall clock |
+|---|---|
+| inject → Scout ticket | 0:53 |
+| ticket → PR open (failing test first, fix, self-verification) | 2:15 |
+| PR → Sentinel review posted | 1:22 |
+| human gate (only pause) | as long as you talk |
+| approve click → deploy complete | 3:19 |
+| deploy → Conductor verified and closed | 0:49 |
+| **machine time, end to end** | **about 8:40** before the arm64-runner and settle changes; expect about 7:00 after |
+
 ## 3. On the day: the eight-minute run
 
 See `RUN_OF_SHOW.md`. In short: `labctl inject off-by-one`, talk, approve at the gate, let Conductor
@@ -56,6 +71,7 @@ close it.
 | Dashboard shows nothing after inject for 3 min | `labctl status`: is `scout` running? Is `prod-errors` depth rising? If errors rise but no ticket: Scout's LLM call may be failing; `aws logs tail /atlas-agentic-lab/scout --since 5m --profile chu-ai`. Switch to replay if under time pressure. |
 | Forge stuck at *cloning* / *working* > 6 min | `aws logs tail /atlas-agentic-lab/forge --since 10m`. Common: GitHub App token, or the RDS test database. Forge gives up and escalates to you after its budget; the ticket goes to Triage assigned to you. Replay. |
 | Sentinel never comments | CI may still be running on the PR head (Sentinel waits up to 4 min). Check the PR checks tab. |
+| Approve button shows "GitHub refused: 403" | The PAT lacks a permission (merge needs Contents read+write). Edit the token in place on GitHub; no redeploy needed; click Approve again. |
 | Approve button errors | The human PAT is missing or expired (`labctl secrets status`). Approve on GitHub instead: approve the review, merge, then Actions → the run → **Review deployments** → approve. Conductor reacts to `deploy.completed` either way. |
 | Deploy workflow fails at "configure-aws-credentials" | The OIDC trust policy did not match GitHub's `sub` claim (it now carries numeric ids: `repo:chu-labs@123/atlas-platform@456:ref:...`). `infra/terraform/iam.tf` accepts both forms; `terraform apply` and re-run. |
 | Deploy workflow fails | Open the run. If build failed, `labctl deploy atlas-platform` from the merged main and Conductor will not fire; close the ticket by hand on the board. |

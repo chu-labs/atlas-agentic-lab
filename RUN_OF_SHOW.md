@@ -19,7 +19,7 @@ run, fallback recording `clean-run` listed by `labctl record list`.
 | 5:20 | **Hand the decision to the audience.** Ask: approve or reject? Read Forge's PR description aloud. | "You are the reviewer. What do you need to know before you say yes?" Take two answers. |
 | 5:50 | Click **Approve** on the dashboard. | "That click did three things: approved the review, merged, and approved the production deployment. All three are recorded against my name." |
 | 6:30 | Actions deploys. Pipeline **deploy**. Conductor *working*. | "Conductor waits for the deploy, hits production, and checks whether the original error signature has stopped." |
-| 7:15 | **verify passed**, ticket **Done**, telemetry: error → PR time, cost. | "Nine minutes of wall clock, most of it waiting on us. Cost: under a dollar. The same fix by a human team, measured on real boards, is days." |
+| 7:15 | **verify passed**, ticket **Done**, telemetry: error → PR time, cost. | "About four and a half minutes from the first error to a reviewed pull request, and under a dollar of model time. The rest of the clock was us. The same fix by a human team, measured on real boards, is days." |
 | 7:45 | Pause on the timeline: agent rows vs the one human row. | "Read the timeline. Every decision, who or what made it, and what authority it had. That is the governance artefact. That is the lecture." |
 
 ## Second beat, if time: the agent that says no (2 min)
