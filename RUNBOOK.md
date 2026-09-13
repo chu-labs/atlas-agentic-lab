@@ -57,6 +57,7 @@ close it.
 | Forge stuck at *cloning* / *working* > 6 min | `aws logs tail /atlas-agentic-lab/forge --since 10m`. Common: GitHub App token, or the RDS test database. Forge gives up and escalates to you after its budget; the ticket goes to Triage assigned to you. Replay. |
 | Sentinel never comments | CI may still be running on the PR head (Sentinel waits up to 4 min). Check the PR checks tab. |
 | Approve button errors | The human PAT is missing or expired (`labctl secrets status`). Approve on GitHub instead: approve the review, merge, then Actions → the run → **Review deployments** → approve. Conductor reacts to `deploy.completed` either way. |
+| Deploy workflow fails at "configure-aws-credentials" | The OIDC trust policy did not match GitHub's `sub` claim (it now carries numeric ids: `repo:chu-labs@123/atlas-platform@456:ref:...`). `infra/terraform/iam.tf` accepts both forms; `terraform apply` and re-run. |
 | Deploy workflow fails | Open the run. If build failed, `labctl deploy atlas-platform` from the merged main and Conductor will not fire; close the ticket by hand on the board. |
 | Wifi / API down on stage | `labctl record play clean-run --speed 1` — replays into the live dashboard. Tell the audience afterwards. |
 | Workbench pane dies silently | `labctl workbench --reset --ticket ATLAS-XX` rebuilds in < 30 s. Teammate branches survive; worktrees are recreated on spawn. |
