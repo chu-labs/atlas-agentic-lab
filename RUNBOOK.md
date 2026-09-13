@@ -61,6 +61,21 @@ Forge should escalate, not fix. `zero-lots` also flips three buildings to zero l
 | deploy → Conductor verified and closed | 0:49 |
 | **machine time, end to end** | **about 8:40** before the arm64-runner and settle changes; expect about 7:00 after |
 
+## 2b. Mission Control controls
+
+- Click any pipeline stage, fleet card, "recently closed" item or timeline row to open the drawer: what
+  happened, who acted with what authority, artefacts (ticket, branch, PR body, review, deploy run, smoke checks).
+  `Esc` closes it. Deep links work: `#ATLAS-37/pr`, `#agent/forge`, `#compare`.
+- `C` toggles the **Compare** overlay (then vs now, two lanes, ratio and cost). The traditional-SDLC lane uses
+  the baselines in `HUMAN_BASELINES_JSON` (defaults: ~14 days for a small bug, 185 AUD/h).
+- Approve / Reject appear only while a PR is waiting at the gate. Approve does three things as you:
+  approve the review, squash-merge, approve the production deployment.
+- Recordings: `labctl record mark` before a run, `labctl record save <name>` after, `labctl record play <name>`
+  to replay into the live dashboard, `labctl record video <name> --speed 4` to render an MP4 locally
+  (needs the docker-compose Postgres, ffmpeg, and `uv run playwright install chromium` once).
+- To show three engineering agents working at once: `labctl scale forge 3` and inject or file three tickets;
+  SQS hands one ticket to each Forge task.
+
 ## 3. On the day: the eight-minute run
 
 See `RUN_OF_SHOW.md`. In short: `labctl inject off-by-one`, talk, approve at the gate, let Conductor
