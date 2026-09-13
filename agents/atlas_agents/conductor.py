@@ -91,8 +91,13 @@ class Agent(base.Agent):
             return r.status_code == 200, f"{r.status_code} {r.text[:120]}"
 
         def quote():
-            r = self.http.post("/api/policies/ATL-100100/quote")
-            return r.status_code in (200, 422), f"{r.status_code}"
+            # quote an active policy that is due soon, so the check never trips a business rule itself
+            due = self.http.get("/api/policies", params={"due_within_days": 30, "limit": 1}).json()
+            if not due:
+                return True, "no policies due; skipped"
+            pn = due[0]["policy_number"]
+            r = self.http.post(f"/api/policies/{pn}/quote")
+            return r.status_code == 200, f"{pn} -> {r.status_code}"
 
         check("health", health)
         check("stats", stats)
