@@ -25,3 +25,17 @@ def test_sig_label_is_stable_and_short():
 def test_every_agent_def_loads_and_none_can_merge():
     for n in ("scout", "forge", "sentinel", "conductor", "watchtower"):
         assert authority.load(n).can("can_merge") is False
+
+
+def test_claude_final_json_parses_trailing_object():
+    from atlas_agents.claude_code import Run
+
+    r = Run(result='Some prose {"nested": {"a": 1}} more prose {"decision": "fix", "plan": ["x"]}')
+    assert r.final_json() == {"decision": "fix", "plan": ["x"]}
+    assert Run(result="no json here").final_json() is None
+
+
+def test_forge_slug():
+    from atlas_agents.forge import slug
+
+    assert slug("Renewal window drops policies due exactly 30 days out") == "renewal-window-drops-policies-due-exactl"

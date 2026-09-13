@@ -1,0 +1,20 @@
+# Forge: Claude Code headless plus the toolchain to build and test atlas-platform.
+FROM python:3.13-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates curl && rm -rf /var/lib/apt/lists/*
+COPY --from=node:22-slim /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:22-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+ && npm install -g @anthropic-ai/claude-code && claude --version
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Claude Code refuses --dangerously-skip-permissions as root, so Forge runs as its own user.
+RUN useradd -m -u 1000 forge && mkdir -p /work /app && chown forge:forge /work /app
+WORKDIR /app
+COPY --chown=forge:forge pyproject.toml uv.lock ./
+USER forge
+RUN uv sync --frozen --no-dev --no-install-project
+COPY --chown=forge:forge atlas_agents ./atlas_agents
+COPY --chown=forge:forge defs ./defs
+RUN uv sync --frozen --no-dev
+ENV PATH="/app/.venv/bin:$PATH" AGENT_WORKDIR=/work HOME=/home/forge
+CMD ["python", "-m", "atlas_agents.run"]
