@@ -51,6 +51,18 @@ def _endpoints(rng: random.Random, building_ids: list[int], policy_numbers: list
 
 
 def loop(base_url: str, user: str, password: str, rps: float) -> None:
+    """Run forever; any unexpected exception is logged and the loop restarts after a short pause."""
+    while True:
+        try:
+            _loop(base_url, user, password, rps)
+        except Exception as e:  # noqa: BLE001
+            LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+            with open(LOCAL_CFG / "traffic.out", "a") as f:
+                f.write(f"{time.strftime('%H:%M:%S')} loop crashed: {type(e).__name__}: {e}; restarting\n")
+            time.sleep(5)
+
+
+def _loop(base_url: str, user: str, password: str, rps: float) -> None:
     rng = random.Random()
     auth = (user, password) if user else None
     with httpx.Client(base_url=base_url, auth=auth, timeout=10) as c:
@@ -63,7 +75,14 @@ def loop(base_url: str, user: str, password: str, rps: float) -> None:
             hot = [x["building_id"] for x in due]
             return b or [1], p or ["ATL-100000"], d, hot
 
-        buildings, policies, due_soon, hot = discover()
+        def safe_discover(prev):
+            """Never let a rollout's 503 kill the generator: keep the previous lists on any failure."""
+            try:
+                return discover()
+            except Exception:  # noqa: BLE001
+                return prev
+
+        buildings, policies, due_soon, hot = safe_discover(([1], ["ATL-100000"], [], []))
         gen = _endpoints(rng, buildings, policies, due_soon, hot)
         n = 0
         stats = {"ok": 0, "4xx": 0, "5xx": 0, "err": 0}
@@ -79,7 +98,7 @@ def loop(base_url: str, user: str, password: str, rps: float) -> None:
             if n % 50 == 0:
                 LOG_FILE.write_text(json.dumps({"requests": n, **stats, "ts": time.time()}))
             if n % 500 == 0:
-                buildings, policies, due_soon, hot = discover()
+                buildings, policies, due_soon, hot = safe_discover((buildings, policies, due_soon, hot))
                 gen = _endpoints(rng, buildings, policies, due_soon, hot)
             time.sleep(max(0.0, rng.expovariate(rps)))
 

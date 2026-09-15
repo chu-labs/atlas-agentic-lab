@@ -113,6 +113,10 @@ def run(defect_ids: list[str], *, name: str | None, workbench: bool = False, rps
             defects.inject(d, workbench=True)
     else:
         defects.inject("+".join(defect_ids))
+    if not traffic.running():
+        u, p = defects._basic_auth()
+        traffic.start(outputs().urls["atlas-platform"], u, p, rps)
+        console.print("[yellow]traffic had stopped during the rollout; restarted[/]")
     console.print("[bold]injected.[/] Watch the dashboard; here is the same story in text:")
     end = watch(after)
     if name:
