@@ -56,8 +56,8 @@ End your reply with exactly one JSON object:
 IMPLEMENT = """PHASE 2 — IMPLEMENT. Follow CONTRIBUTING.md and CLAUDE.md exactly.
 1. Write a failing test that reproduces the bug in the matching `tests/test_*.py`. Run just that test with
    `uv run pytest <path>::<name>` and confirm it FAILS. Commit only the test: `git add -A && git commit -m "test: {key} reproduce <short>"`.
-2. Make the smallest correct fix. Run `uv run pytest` and `uv run ruff check atlas tests`; both must pass.
-   Commit: `git commit -am "fix: {key} <short>"`.
+2. Make the smallest correct fix. Run `uv run pytest`, then `uv run ruff check --fix atlas tests` and
+   `uv run ruff format atlas tests` (both must end clean; never leave unused imports). Commit: `git commit -am "fix: {key} <short>"`.
 Do not push. Do not touch migrations, dependencies, business-rule constants, or anything outside the ticket.
 If you notice something else worth fixing, leave it and mention it under not_changed.
 Keep narrating briefly in plain English. End with exactly one JSON object:
@@ -266,7 +266,17 @@ class Agent(base.Agent):
             return False, "the full suite is not green:\n" + suite.stdout[-1200:]
         lint = _sh(["uv", "run", "ruff", "check", "atlas", "tests"], cwd=wd, env=env, check=False)
         if lint.returncode != 0:
-            return False, "ruff is not clean:\n" + lint.stdout[-800:]
+            # Style nits must never abort a fix: auto-fix, re-test, and commit the tidy-up as its own commit.
+            _sh(["uv", "run", "ruff", "check", "--fix", "atlas", "tests"], cwd=wd, env=env, check=False)
+            _sh(["uv", "run", "ruff", "format", "atlas", "tests"], cwd=wd, env=env, check=False)
+            lint = _sh(["uv", "run", "ruff", "check", "atlas", "tests"], cwd=wd, env=env, check=False)
+            if lint.returncode != 0:
+                return False, "ruff is not clean even after auto-fix:\n" + lint.stdout[-800:]
+            if _sh(["git", "status", "--porcelain"], cwd=wd).stdout.strip():
+                _sh(["git", "commit", "-qam", f"style: {key} ruff auto-fix"], cwd=wd)
+                suite = _sh(["uv", "run", "pytest", "-q", "-p", "no:cacheprovider"], cwd=wd, env=env, check=False)
+                if suite.returncode != 0:
+                    return False, "the suite broke after lint auto-fix:\n" + suite.stdout[-1200:]
         log_out = _sh(["git", "log", "--format=%h %s", "main..HEAD"], cwd=wd).stdout.strip().splitlines()
         if require_two_commits:
             test_commits = [c for c in log_out if " test:" in c or c.split(" ", 1)[1].startswith("test")]
