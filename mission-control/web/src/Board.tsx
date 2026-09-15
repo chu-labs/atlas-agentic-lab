@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Popover, type PopoverItem } from "./Popover";
+import { DataTable, FilterBar, Panel, StatusChip, Tabs, toneForStatus, type Column } from "./ui";
 import { Avatar } from "./Avatar";
 import type { FleetCard, Selection } from "./types";
 import { hms } from "./time";
@@ -33,6 +34,14 @@ export interface BoardIssue {
   story_points?: number | null;
 }
 
+function age(iso: string): string {
+  const s = (Date.now() - Date.parse(iso)) / 1000;
+  if (!Number.isFinite(s)) return "";
+  if (s < 3600) return `${Math.max(1, Math.round(s / 60))}m`;
+  if (s < 86400) return `${Math.round(s / 3600)}h`;
+  return `${Math.round(s / 86400)}d`;
+}
+
 const TYPE_GLYPH: Record<BoardIssue["type"], string> = { Bug: "🐞", Story: "📗", Task: "☑︎", Incident: "🚨" };
 const PRIO_RANK: Record<BoardIssue["priority"], number> = { Highest: 0, High: 1, Medium: 2, Low: 3, Lowest: 4 };
 
@@ -41,21 +50,31 @@ export function Board({
   onSelect,
   selected,
   toast,
+  query = "",
 }: {
   fleet: FleetCard[];
   onSelect: (s: Selection) => void;
   selected: Selection | null;
   toast: (msg: string) => void;
+  query?: string;
 }) {
   const issues = useFetch<BoardIssue[]>("/api/board/issues?limit=300", 5000);
   const users = useFetch<BoardUser[]>("/api/board/users", 60000);
   const [creating, setCreating] = useState(false);
   const [filter, setFilter] = useState("");
+  const [f, setF] = useState<Record<string, string>>({});
+  const [mode, setMode] = useState<"columns" | "table">("columns");
+  useEffect(() => setFilter(query), [query]);
   const list = useMemo(() => {
     const all = issues.data ?? [];
     const q = filter.trim().toLowerCase();
-    return q ? all.filter((i) => `${i.key} ${i.title} ${i.assignee?.handle ?? ""}`.toLowerCase().includes(q)) : all;
-  }, [issues.data, filter]);
+    return all.filter((i) => {
+      if (f.type && i.type !== f.type) return false;
+      if (f.priority && i.priority !== f.priority) return false;
+      if (f.assignee && (i.assignee?.handle ?? "none") !== f.assignee) return false;
+      return !q || `${i.key} ${i.title} ${i.assignee?.handle ?? ""} ${i.labels.join(" ")}`.toLowerCase().includes(q);
+    });
+  }, [issues.data, filter, f]);
   const agents = fleet.filter((c) => c.kind === "fleet");
   const humans = (users.data ?? []).filter((u) => u.kind === "human");
 
@@ -70,17 +89,45 @@ export function Board({
     }
   };
 
+  const assignees = [...new Map((issues.data ?? []).filter((i) => i.assignee).map((i) => [i.assignee!.handle, i.assignee!.display_name])).entries()];
+  const tableCols: Column<BoardIssue>[] = [
+    { key: "key", title: "Key", width: "6.5rem", mono: true, render: (i) => <span className="b">{i.key}</span>, sort: (i) => i.key },
+    { key: "type", title: "Type", width: "5.5rem", render: (i) => <>{TYPE_GLYPH[i.type]} {i.type}</>, sort: (i) => i.type },
+    { key: "title", title: "Title", render: (i) => i.title, sort: (i) => i.title },
+    { key: "status", title: "Status", width: "7.5rem", render: (i) => <StatusChip tone={toneForStatus(i.status)} icon={false}>{i.status}</StatusChip>, sort: (i) => STATUSES.indexOf(i.status) },
+    { key: "prio", title: "Priority", width: "6.5rem", render: (i) => <StatusChip tone={i.priority === "Highest" ? "bad" : i.priority === "High" ? "warn" : "muted"} icon={false}>{i.priority}</StatusChip>, sort: (i) => PRIO_RANK[i.priority] },
+    { key: "who", title: "Assignee", width: "9rem", render: (i) => <span className="avatar-cell"><Avatar handle={i.assignee?.handle} size={20} color={i.assignee?.color} emoji={i.assignee?.avatar} />{i.assignee?.display_name ?? "—"}</span>, sort: (i) => i.assignee?.display_name },
+    { key: "labels", title: "Labels", width: "12rem", render: (i) => <span className="m">{i.labels.join(", ")}</span> },
+    { key: "pr", title: "PR", width: "4rem", render: (i) => (i.pr_url ? <a href={i.pr_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>PR</a> : "—") },
+    { key: "upd", title: "Updated", width: "5.5rem", mono: true, render: (i) => hms(i.updated_at), sort: (i) => i.updated_at, defaultDesc: true },
+  ];
   return (
-    <section className="board">
-      <header className="board-head">
-        <h2 className="panel-title">
-          Board <span className="panel-sub">ATLAS · {list.length} issues{issues.error ? ` · ${issues.error}` : ""}</span>
-        </h2>
-        <input className="board-filter" placeholder="filter…" value={filter} onChange={(e) => setFilter(e.target.value)} />
-        <button className="btn-primary" onClick={() => setCreating(true)}>
-          + New ticket
-        </button>
-      </header>
+    <section className="board span-12 fill">
+      <Panel
+        title="Board"
+        count={list.length}
+        sub={`ATLAS · ${(issues.data ?? []).length} issues${issues.error ? ` · ${issues.error}` : ""}`}
+        className="fill"
+        actions={
+          <>
+            <Tabs items={[{ id: "columns", label: "Columns" }, { id: "table", label: "Table" }]} value={mode} onChange={setMode} />
+            <button className="btn-primary" onClick={() => setCreating(true)}>+ New ticket</button>
+          </>
+        }
+      >
+        <FilterBar
+          filters={[
+            { key: "type", label: "type", options: ["Bug", "Story", "Task", "Incident"].map((v) => ({ value: v, label: v })) },
+            { key: "priority", label: "priority", options: ["Highest", "High", "Medium", "Low", "Lowest"].map((v) => ({ value: v, label: v })) },
+            { key: "assignee", label: "assignee", options: [{ value: "none", label: "unassigned" }, ...assignees.map(([value, label]) => ({ value, label }))] },
+          ]}
+          values={f}
+          onChange={(k, v) => setF((x) => ({ ...x, [k]: v }))}
+          text={filter}
+          onText={setFilter}
+          placeholder="key, title, label…"
+          right={<span className="m small">{STATUSES.map((st) => `${st} ${list.filter((i) => i.status === st).length}`).join(" · ")}</span>}
+        />
       {creating && (
         <NewTicket
           agents={agents}
@@ -94,6 +141,9 @@ export function Board({
           }}
         />
       )}
+      {mode === "table" ? (
+        <DataTable rows={list} columns={tableCols} rowKey={(i) => i.key} onRowClick={(i) => onSelect({ kind: "issue", key: i.key })} selectedKey={selected?.kind === "issue" ? selected.key : null} defaultSort={{ key: "upd", desc: true }} dense emptyText="no issues match" />
+      ) : (
       <div className="columns">
         {STATUSES.map((s) => {
           const col = list.filter((i) => i.status === s).sort((a, b) => PRIO_RANK[a.priority] - PRIO_RANK[b.priority] || b.updated_at.localeCompare(a.updated_at));
@@ -101,6 +151,7 @@ export function Board({
             <div key={s} className={`column col-${s.toLowerCase().replace(/\s+/g, "-")}`}>
               <div className="column-head">
                 <span className="column-name">{s}</span>
+                <span className="column-wip">{s === "In Progress" || s === "In Review" ? "WIP" : ""}</span>
                 <span className="column-count">{col.length}</span>
               </div>
               <div className="column-cards">
@@ -121,6 +172,8 @@ export function Board({
           );
         })}
       </div>
+      )}
+      </Panel>
     </section>
   );
 }
@@ -201,8 +254,8 @@ function IssueCard({
             }
           }}
         >
-          <Avatar handle={a?.handle} size={28} color={a?.color} emoji={a?.avatar} />
-          <span className="assignee-name">{a ? a.display_name : "Assign to…"}</span>
+          <Avatar handle={a?.handle} size={20} color={a?.color} emoji={a?.avatar} />
+          <span className="assignee-name">{a ? a.display_name : "Assign…"}</span>
           <span className="caret">▾</span>
         </button>
         {issue.pr_url && (
@@ -210,7 +263,7 @@ function IssueCard({
             PR
           </a>
         )}
-        <span className="issue-when">{hms(issue.updated_at)}</span>
+        <span className="issue-when" title={hms(issue.updated_at)}>{age(issue.updated_at)}</span>
       </div>
       {menu && trigger.current && <Popover anchor={trigger.current} items={items} onClose={() => setMenu(false)} />}
     </article>

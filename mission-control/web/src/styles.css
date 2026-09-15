@@ -1,23 +1,6 @@
 /* ATLAS Mission Control — one screen, read from the back of a 300-seat theatre. */
 :root {
-  --bg: #06080d;
-  --panel: #0d1220;
-  --panel-2: #131a2c;
-  --border: #1f2942;
-  --text: #f3f5fa;
-  --muted: #94a0bd;
-  --dim: #5d6b8a;
-  --blue: #3b82f6;
-  --green: #22c55e;
-  --amber: #f5b942;
-  --red: #ef4444;
-  --violet: #a855f7;
-  --escalated: #d946ef;
-  --done: #2f6fe4;
-  --font: -apple-system, "Inter", "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 20px;
-  color-scheme: dark;
+  /* tokens live in tokens.css */
 }
 
 * { box-sizing: border-box; }

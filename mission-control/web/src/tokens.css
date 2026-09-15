@@ -1,0 +1,34 @@
+/* Design tokens — shared with the board. Density and contrast, not size, carry the projector. */
+:root {
+  --bg: #0b0f17;
+  --surface: #111826;
+  --surface-2: #172033;
+  --border: #223049;
+  --text: #e6eaf2;
+  --muted: #8b97ad;
+  --dim: #5f6b82;
+  --accent: #3b82f6;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #a855f7;
+
+  /* legacy aliases used by the pipeline / gate / drawer rules */
+  --panel: var(--surface);
+  --panel-2: var(--surface-2);
+  --blue: var(--accent);
+  --green: var(--success);
+  --amber: var(--warning);
+  --red: var(--danger);
+  --violet: var(--info);
+  --escalated: #d946ef;
+  --done: #2f6fe4;
+
+  --radius: 6px;
+  --pad: 12px;
+  --row: 32px;
+  --font: "Inter", -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 15px;
+  color-scheme: dark;
+}

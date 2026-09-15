@@ -18,7 +18,32 @@ const STATUS_LABEL: Record<AgentStatus, string> = {
   escalated: "escalated",
 };
 
-export function Fleet({ fleet, onSelect, selected, title = "Fleet" }: { fleet: FleetCard[]; onSelect: (s: Selection) => void; selected: Selection | null; title?: string }) {
+export function Fleet({ fleet, onSelect, selected, title = "Fleet", compact = false }: { fleet: FleetCard[]; onSelect: (s: Selection) => void; selected: Selection | null; title?: string; compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="fleet-compact">
+        {fleet.map((c) => (
+          <button key={c.handle} className={`fc status-${c.status} ${selected?.kind === "agent" && selected.handle === c.handle ? "selected" : ""}`} style={{ ["--agent" as string]: c.color }} onClick={() => onSelect({ kind: "agent", handle: c.handle })}>
+            <Avatar handle={c.handle} size={28} color={c.color} emoji={c.avatar} />
+            <span className="fc-main">
+              <span className="fc-row">
+                <span className="fc-name">{c.display_name}</span>
+                <span className={`pill pill-${c.status}`}>{STATUS_LABEL[c.status] ?? c.status}</span>
+                {c.ticket && <span className="fc-ticket mono">{c.ticket}</span>}
+              </span>
+              <span className="fc-think" key={c.thinking}>{c.thinking || <span className="muted">—</span>}</span>
+            </span>
+            <span className="fc-chips">
+              {CHIPS.map(([k, label]) => (
+                <span key={k} className={`chip ${c.authority?.[k] === true ? "chip-on" : "chip-off"}`}>{label}</span>
+              ))}
+            </span>
+          </button>
+        ))}
+        {fleet.length === 0 && <div className="empty-line">no agents</div>}
+      </div>
+    );
+  }
   return (
     <section className="fleet">
       <h2 className="panel-title">

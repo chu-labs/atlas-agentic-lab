@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { hms, mmss } from "./time";
+import { InlineBar, Panel } from "./ui";
 import { useFetch } from "./useFetch";
 import { postJSON } from "./useMission";
 
@@ -80,18 +81,16 @@ export function CiCd({ toast, humanConfigured }: { toast: (m: string) => void; h
     }
   };
   return (
-    <section className="cicd">
-      <header className="board-head">
-        <h2 className="panel-title">
-          CI/CD <span className="panel-sub">{data?.repo ?? "…"} · last 10 runs · refreshed {data ? hms(data.fetched_at) : "…"}</span>
-        </h2>
-        {data && !data.authenticated && <span className="muted small">unauthenticated GitHub reads</span>}
+    <section className="cicd span-12 fill">
+      <div className="cicd-head">
+        <span className="panel-h">CI/CD</span>
+        <span className="panel-s">{data?.repo ?? "…"} · last 10 runs · refreshed {data ? hms(data.fetched_at) : "…"}{data && !data.authenticated ? " · unauthenticated reads" : ""}</span>
         {data?.url && (
           <a className="link-out" href={`${data.url}/actions`} target="_blank" rel="noreferrer">
             Open on GitHub ↗
           </a>
         )}
-      </header>
+      </div>
       {(error || data?.error) && <div className="banner banner-warn">{error ?? data?.error}</div>}
       {data?.deploying && (
         <div className="banner banner-deploy">
@@ -112,10 +111,7 @@ export function CiCd({ toast, humanConfigured }: { toast: (m: string) => void; h
         </div>
       )}
       <div className="cicd-grid">
-        <div className="runs">
-          <div className="section-head">
-            Workflow runs <span className="count">{data?.runs.length ?? 0}</span>
-          </div>
+        <Panel title="Workflow runs" count={data?.runs.length ?? 0} className="fill" scroll>
           {(data?.runs ?? []).map((r) => {
             const t = tone(r.status, r.conclusion);
             return (
@@ -136,13 +132,11 @@ export function CiCd({ toast, humanConfigured }: { toast: (m: string) => void; h
               </button>
             );
           })}
-          {data && data.runs.length === 0 && <div className="muted empty">No runs visible{data.error ? "" : " for this repository"}.</div>}
-        </div>
+          {data && data.runs.length === 0 && <div className="empty-line">No runs visible{data.error ? "" : " for this repository"}.</div>}
+        </Panel>
         <div className="run-detail">
-          {run ? <RunDetail run={run} onApprove={() => void approve(run)} humanConfigured={humanConfigured} /> : <div className="muted empty">Select a run.</div>}
-          <div className="section-head">
-            Open pull requests <span className="count">{data?.pulls.length ?? 0}</span>
-          </div>
+          {run ? <RunDetail run={run} onApprove={() => void approve(run)} humanConfigured={humanConfigured} /> : <div className="empty-line">Select a run.</div>}
+          <Panel title="Open pull requests" count={data?.pulls.length ?? 0} scroll>
           <div className="pulls">
             {(data?.pulls ?? []).map((p) => (
               <a key={p.number} className="pull" href={p.url} target="_blank" rel="noreferrer">
@@ -166,8 +160,9 @@ export function CiCd({ toast, humanConfigured }: { toast: (m: string) => void; h
                 </span>
               </a>
             ))}
-            {data && data.pulls.length === 0 && <div className="muted empty">No open pull requests.</div>}
+            {data && data.pulls.length === 0 && <div className="empty-line">No open pull requests.</div>}
           </div>
+          </Panel>
         </div>
       </div>
     </section>
@@ -196,7 +191,7 @@ function RunDetail({ run, onApprove, humanConfigured }: { run: Run; onApprove: (
         </a>
       </div>
       <div className="stagebar">
-        {run.jobs.length === 0 && <div className="muted small">No jobs reported yet.</div>}
+        {run.jobs.length === 0 && <div className="empty-line">No jobs reported yet.</div>}
         {run.jobs.map((j, i) => {
           const jt = tone(j.status, j.conclusion);
           const isGate = i === gateIdx;
@@ -213,6 +208,21 @@ function RunDetail({ run, onApprove, humanConfigured }: { run: Run; onApprove: (
           );
         })}
       </div>
+      {run.jobs.length > 0 && (
+        <div className="jobbars">
+          {run.jobs.map((j) => {
+            const max = Math.max(1, ...run.jobs.map((x) => x.duration_seconds ?? 0));
+            const jt = tone(j.status, j.conclusion);
+            return (
+              <div key={j.id} className="jobbar">
+                <span className="jobbar-name">{j.name}</span>
+                <InlineBar value={j.duration_seconds ?? 0} max={max} tone={jt} label={`${j.name}: ${mmss(j.duration_seconds ?? 0)}`} />
+                <span className="mono m">{j.duration_seconds != null ? mmss(j.duration_seconds) : "—"}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {run.pending_deployments.length > 0 && (
         <div className="pending">
           <span>

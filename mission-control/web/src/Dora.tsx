@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { fmtInt, fmtUSD, mmss } from "./time";
+import { DataTable, Panel, StatusChip, Tabs, type Column } from "./ui";
 import { useFetch } from "./useFetch";
 
 interface DoraData {
@@ -49,21 +50,26 @@ export function Dora() {
   const dfLabel = !df ? "—" : df.count === 0 ? "0" : df.per_day >= 1 ? `${df.per_day.toFixed(1)} / day` : df.per_day >= 1 / 7 ? `${(df.per_day * 7).toFixed(1)} / week` : `${(df.per_day * 30).toFixed(1)} / month`;
   const cfr = data?.change_failure_rate.rate;
   const maxTrend = Math.max(1, ...(data?.trend.map((t) => t.deploys) ?? [1]));
+  type T = DoraData["tickets"][number];
+  const ticketCols: Column<T>[] = [
+    { key: "ticket", title: "Ticket", width: "6.5rem", mono: true, render: (t) => <span className="b">{t.ticket}</span>, sort: (t) => t.ticket },
+    { key: "title", title: "Title", render: (t) => t.title, sort: (t) => t.title },
+    { key: "e2p", title: "Error → PR", align: "right", width: "7rem", mono: true, render: (t) => human(t.error_to_pr), sort: (t) => t.error_to_pr },
+    { key: "p2d", title: "PR → deploy", align: "right", width: "7rem", mono: true, render: (t) => human(t.pr_to_deploy), sort: (t) => t.pr_to_deploy },
+    { key: "d2v", title: "Deploy → verified", align: "right", width: "8.5rem", mono: true, render: (t) => human(t.deploy_to_verified), sort: (t) => t.deploy_to_verified },
+    { key: "total", title: "Total", align: "right", width: "6rem", mono: true, render: (t) => human(t.total), sort: (t) => t.total },
+    { key: "usd", title: "Cost", align: "right", width: "5.5rem", mono: true, render: (t) => fmtUSD(t.usd), sort: (t) => t.usd },
+    { key: "state", title: "State", width: "7.5rem", render: (t) => <StatusChip tone={t.escalated ? "violet" : t.verify_failed ? "bad" : t.closed ? "ok" : "accent"} icon={false}>{t.escalated ? "escalated" : t.verify_failed ? "verify failed" : t.closed ? "closed" : "in flight"}</StatusChip> },
+  ];
   return (
-    <section className="dora">
-      <header className="board-head">
-        <h2 className="panel-title">
-          DORA <span className="panel-sub">four keys · agentic pipeline vs the traditional team</span>
-        </h2>
-        <div className="seg">
-          {(["24h", "7d", "all"] as const).map((w) => (
-            <button key={w} className={`seg-btn ${win === w ? "on" : ""}`} onClick={() => setWin(w)}>
-              {w}
-            </button>
-          ))}
-        </div>
-        {error && <span className="muted small">{error}</span>}
-      </header>
+    <section className="dora span-12 fill">
+      <div className="cicd-head">
+        <span className="panel-h">DORA</span>
+        <span className="panel-s">four keys · agentic pipeline vs the traditional team{error ? ` · ${error}` : ""}</span>
+        <span className="panel-actions">
+          <Tabs items={(["24h", "7d", "all"] as const).map((w) => ({ id: w, label: w }))} value={win} onChange={setWin} />
+        </span>
+      </div>
       <div className="tiles">
         <Tile
           label="Deployment frequency"
@@ -100,57 +106,9 @@ export function Dora() {
           good={data?.time_to_restore.median_seconds != null && data.time_to_restore.median_seconds < 3600}
         />
       </div>
-      <div className="section-head">
-        Per ticket <span className="count">{data?.tickets.length ?? 0}</span>
-        <span className="muted small">
-          {" "}
-          · traditional benchmarks {b.notes ?? "illustrative until supplied"}
-        </span>
-      </div>
-      <div className="table-wrap">
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>Ticket</th>
-              <th>Title</th>
-              <th className="num">Error → PR</th>
-              <th className="num">PR → deploy</th>
-              <th className="num">Deploy → verified</th>
-              <th className="num">Total</th>
-              <th className="num">Cost</th>
-              <th>State</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(data?.tickets ?? [])
-              .slice()
-              .reverse()
-              .map((t) => (
-                <tr key={t.ticket} className={t.verify_failed ? "row-bad" : ""}>
-                  <td className="mono">{t.ticket}</td>
-                  <td className="ellip">{t.title}</td>
-                  <td className="num mono">{human(t.error_to_pr)}</td>
-                  <td className="num mono">{human(t.pr_to_deploy)}</td>
-                  <td className="num mono">{human(t.deploy_to_verified)}</td>
-                  <td className="num mono">{human(t.total)}</td>
-                  <td className="num mono">{fmtUSD(t.usd)}</td>
-                  <td>
-                    <span className={`pill ${t.escalated ? "pill-escalated" : t.verify_failed ? "pill-blocked" : t.closed ? "pill-done" : "pill-working"}`}>
-                      {t.escalated ? "escalated" : t.verify_failed ? "verify failed" : t.closed ? "closed" : "in flight"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            {data && data.tickets.length === 0 && (
-              <tr>
-                <td colSpan={8} className="muted">
-                  No tickets in this window.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <Panel title="Per ticket" count={data?.tickets.length ?? 0} sub={`traditional benchmarks ${b.notes ?? "illustrative until supplied"}`} className="fill">
+        <DataTable rows={(data?.tickets ?? []).slice().reverse()} columns={ticketCols} rowKey={(t) => t.ticket} defaultSort={{ key: "ticket", desc: true }} dense emptyText="no tickets in this window" rowClass={(t) => (t.verify_failed ? "row-bad" : "")} />
+      </Panel>
     </section>
   );
 }

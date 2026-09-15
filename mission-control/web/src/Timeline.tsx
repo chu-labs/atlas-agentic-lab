@@ -102,28 +102,36 @@ export function Timeline({
   rows,
   onSelect,
   title = "Timeline",
+  dense = false,
+  className = "",
+  query = "",
 }: {
   events: MissionEvent[];
   activeRow: PipelineRow | null;
   rows: PipelineRow[];
   onSelect: (s: Selection) => void;
   title?: string;
+  dense?: boolean;
+  className?: string;
+  query?: string;
 }) {
   const open = (e: MissionEvent) => {
     const row = rows.find((r) => belongsTo(e, r));
     if (row?.ticket) onSelect({ kind: "stage", ticket: row.ticket, stage: stageOf(e, row) });
   };
   const listRef = useRef<HTMLDivElement>(null);
-  const groups = useMemo(() => groupEvents(events), [events]);
+  const q = query.trim().toLowerCase();
+  const filtered = useMemo(() => (q ? events.filter((e) => `${e.ticket ?? ""} ${e.summary} ${e.actor?.display_name ?? ""} ${e.source} ${e.detail_type}`.toLowerCase().includes(q)) : events), [events, q]);
+  const groups = useMemo(() => groupEvents(filtered), [filtered]);
   useEffect(() => {
     listRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [groups[0]?.latest.id, groups[0]?.count]);
   const origin = activeRow?.first_ts ?? null;
   return (
-    <section className="timeline">
+    <section className={`timeline ${dense ? "timeline-dense" : ""} ${className}`}>
       <h2 className="panel-title">
-        {title} <span className="count">{events.length}</span>
-        <span className="panel-sub">{groups.length !== events.length ? `${groups.length} rows · repeats collapsed` : "newest first"}</span>
+        {title} <span className="count">{filtered.length}</span>
+        <span className="panel-sub">{groups.length !== filtered.length ? `${groups.length} rows · repeats collapsed` : "newest first"}{q ? ` · filter "${query}"` : ""}</span>
       </h2>
       <div className="timeline-list" ref={listRef}>
         {groups.length === 0 && <div className="muted empty">No events yet.</div>}
@@ -135,7 +143,7 @@ export function Timeline({
           return (
             <div
               key={e.id}
-              className={`row ${w.human ? "row-human" : ""} kind-${e.detail_type.replace(".", "-")} ${rows.some((r) => belongsTo(e, r)) ? "row-click" : ""}`}
+              className={`row ${dense ? "row-dense" : ""} ${w.human ? "row-human" : ""} kind-${e.detail_type.replace(".", "-")} ${rows.some((r) => belongsTo(e, r)) ? "row-click" : ""}`}
               onClick={() => open(e)}
             >
               <span className="row-time">{hms(e.ts)}</span>

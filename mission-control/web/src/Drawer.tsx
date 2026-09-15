@@ -441,12 +441,18 @@ function IssueDrawer({ issueKey, state, onClose, onSelect }: { issueKey: string;
         onClose={onClose}
         avatar={data.assignee ? <Avatar handle={data.assignee.handle} size={96} color={data.assignee.color} emoji={data.assignee.avatar} /> : undefined}
       />
-      <div className="drawer-kpis">
-        <Kpi label="status" value={data.status} />
-        <Kpi label="priority" value={data.priority} />
-        <Kpi label="assignee" value={data.assignee?.display_name ?? "—"} sub={data.assignee?.mode ?? data.assignee?.kind ?? ""} />
-        <Kpi label="updated" value={hms(data.updated_at)} sub={`created ${hms(data.created_at)}`} />
-      </div>
+      <dl className="fields">
+        <dt>Status</dt><dd>{data.status}</dd>
+        <dt>Priority</dt><dd>{data.priority}</dd>
+        <dt>Type</dt><dd>{data.type}</dd>
+        <dt>Assignee</dt><dd>{data.assignee ? `${data.assignee.display_name} · ${data.assignee.mode ?? data.assignee.kind}` : "—"}</dd>
+        <dt>Reporter</dt><dd>{data.reporter?.display_name ?? "—"}</dd>
+        <dt>Branch</dt><dd>{data.branch ? <code>{data.branch}</code> : "—"}</dd>
+        <dt>Created</dt><dd className="mono">{hms(data.created_at)}</dd>
+        <dt>Updated</dt><dd className="mono">{hms(data.updated_at)}</dd>
+        <dt>Labels</dt><dd>{data.labels.length ? data.labels.join(", ") : "—"}</dd>
+        <dt>Pipeline</dt><dd>{row ? <button className="linkish" onClick={() => onSelect({ kind: "stage", ticket: data.key, stage: row.stage })}>{row.stage.replace("_", " ")} →</button> : "not in flight"}</dd>
+      </dl>
       <div className="drawer-links">
         {board && (
           <a href={`${board.replace(/\/$/, "")}/issue/${data.key}`} target="_blank" rel="noreferrer">
