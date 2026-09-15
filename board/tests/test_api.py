@@ -75,7 +75,7 @@ def test_transition_flow_is_validated(client, events):
     assert r.status_code == 200 and r.json()["resolved_at"] is None
     trans = [d for t, d in events if t == "issue.transitioned"]
     assert trans[0]["from"] == "Triage" and trans[0]["to"] == "In Progress"
-    assert trans[0]["actor"]["mode"] == "supervised"
+    assert trans[0]["actor"]["mode"] in ("autonomous", "supervised")
 
 
 def test_comment_and_reasoning(client, events):

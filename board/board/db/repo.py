@@ -84,7 +84,8 @@ select i.*,
        a.avatar as assignee_avatar, a.color as assignee_color, a.mode as assignee_mode,
        r.handle as reporter_handle, r.display_name as reporter_display_name, r.kind as reporter_kind,
        r.avatar as reporter_avatar, r.color as reporter_color, r.mode as reporter_mode,
-       s.name as sprint_name, s.state as sprint_state
+       s.name as sprint_name, s.state as sprint_state,
+       (select count(*) from comments cm where cm.issue_id = i.id) as comment_count
 from issues i
 left join users a on a.id = i.assignee_id
 join users r on r.id = i.reporter_id
@@ -113,6 +114,7 @@ def shape_issue(r: dict) -> dict:
         "created_at": r["created_at"],
         "updated_at": r["updated_at"],
         "resolved_at": r["resolved_at"],
+        "comment_count": r.get("comment_count", 0),
     }
 
 

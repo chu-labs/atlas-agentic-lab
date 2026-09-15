@@ -41,41 +41,41 @@ def _authority(**over) -> dict:
 
 
 USERS = [
-    dict(handle="maroun", display_name="Maroun", kind="human", avatar="🧭", color="#f59e0b", remit="Product Owner", authority=None, mode=None),
+    dict(handle="maroun", display_name="Maroun", kind="human", avatar="🧭", color="#f5b942", remit="Product Owner", authority=None, mode=None),
     dict(handle="priya", display_name="Priya", kind="human", avatar="🌿", color="#ec4899", remit="Engineer", authority=None, mode=None),
     dict(handle="tom", display_name="Tom", kind="human", avatar="🎸", color="#22c55e", remit="Engineer", authority=None, mode=None),
     dict(handle="alex", display_name="Alex", kind="human", avatar="📐", color="#a78bfa", remit="Underwriting lead", authority=None, mode=None),
     dict(
-        handle="scout", display_name="Scout", kind="agent", avatar="🔭", color="#38bdf8",
+        handle="scout", display_name="Scout", kind="agent", avatar="🔭", color="#f59e0b",
         remit="Triage: watches production errors, opens tickets",
         authority=_authority(can_read_production_telemetry=True), mode="autonomous",
     ),
     dict(
-        handle="forge", display_name="Forge", kind="agent", avatar="⚒️", color="#fb923c",
+        handle="forge", display_name="Forge", kind="agent", avatar="⚒️", color="#3b82f6",
         remit="Engineering: reproduces, tests first, fixes, opens PRs",
         authority=_authority(can_read_production_telemetry=True, can_write_code=True), mode="autonomous",
     ),
     dict(
-        handle="sentinel", display_name="Sentinel", kind="agent", avatar="🛡️", color="#34d399",
+        handle="sentinel", display_name="Sentinel", kind="agent", avatar="🛡️", color="#a855f7",
         remit="Review: independent PR review",
         authority=_authority(can_review=True), mode="autonomous",
     ),
     dict(
-        handle="conductor", display_name="Conductor", kind="agent", avatar="🎼", color="#c084fc",
+        handle="conductor", display_name="Conductor", kind="agent", avatar="🎼", color="#10b981",
         remit="Release: verifies deploys, closes tickets",
         authority=_authority(can_read_production_telemetry=True, can_deploy=True), mode="autonomous",
     ),
     dict(
-        handle="watchtower", display_name="Watchtower", kind="agent", avatar="🗼", color="#f87171",
+        handle="watchtower", display_name="Watchtower", kind="agent", avatar="🗼", color="#ef4444",
         remit="Incidents: timelines and postmortems",
         authority=_authority(can_read_production_telemetry=True), mode="autonomous",
     ),
 ]
 
 SPRINTS = [
-    dict(name="Sprint 14", goal="Renewal season hardening: no silent money errors, no 500s on the broker portal.", starts_on=date(2026, 8, 17), ends_on=date(2026, 8, 30), state="closed"),
-    dict(name="Sprint 15", goal="Observability and quoting accuracy before the September renewal peak.", starts_on=date(2026, 8, 31), ends_on=date(2026, 9, 13), state="active"),
-    dict(name="Sprint 16", goal="Broker self-service and rate table versioning.", starts_on=date(2026, 9, 14), ends_on=date(2026, 9, 27), state="future"),
+    dict(name="Sprint 14", goal="Renewal season hardening: no silent money errors, no 500s on the broker portal.", starts_on=date(2026, 8, 31), ends_on=date(2026, 9, 13), state="closed"),
+    dict(name="Sprint 15", goal="Observability and quoting accuracy before the September renewal peak.", starts_on=date(2026, 9, 14), ends_on=date(2026, 9, 27), state="active"),
+    dict(name="Sprint 16", goal="Broker self-service and rate table versioning.", starts_on=date(2026, 9, 28), ends_on=date(2026, 10, 11), state="future"),
 ]
 
 

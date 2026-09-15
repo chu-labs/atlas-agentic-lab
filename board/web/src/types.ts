@@ -7,6 +7,8 @@ export type UserSummary = {
   mode: "autonomous" | "supervised" | null;
 };
 
+export type User = UserSummary & { id: number; remit: string; authority: Record<string, unknown> | null };
+
 export type Status = "Backlog" | "Triage" | "In Progress" | "In Review" | "Done";
 export type Priority = "Highest" | "High" | "Medium" | "Low" | "Lowest";
 export type IssueType = "Bug" | "Story" | "Task" | "Incident";
@@ -22,8 +24,14 @@ export type Card = {
   reporter: UserSummary;
   labels: string[];
   story_points: number | null;
+  sprint_id: number | null;
+  sprint: { id: number; name: string; state: string } | null;
   pr_url: string | null;
+  branch: string | null;
+  created_at: string;
   updated_at: string;
+  resolved_at: string | null;
+  comment_count: number;
 };
 
 export type Sprint = {
@@ -35,9 +43,11 @@ export type Sprint = {
   state: "closed" | "active" | "future";
 };
 
+export type ActivityKind = "created" | "transitioned" | "commented" | "assigned" | "field_changed" | "reasoning" | "escalated";
+
 export type Activity = {
   id: number;
-  kind: "created" | "transitioned" | "commented" | "assigned" | "field_changed" | "reasoning" | "escalated";
+  kind: ActivityKind;
   actor: UserSummary;
   from_value: string | null;
   to_value: string | null;
@@ -47,12 +57,10 @@ export type Activity = {
 
 export type Issue = Card & {
   description: string;
-  branch: string | null;
-  sprint: { id: number; name: string; state: string } | null;
-  created_at: string;
-  resolved_at: string | null;
+  source: Record<string, unknown> | null;
   activity: Activity[];
   counts: Record<string, number>;
+  allowed_transitions: Status[];
 };
 
 export type Board = {
@@ -63,4 +71,16 @@ export type Board = {
 };
 
 export const STATUSES: Status[] = ["Backlog", "Triage", "In Progress", "In Review", "Done"];
-export const TYPE_GLYPH: Record<IssueType, string> = { Bug: "🐞", Story: "📗", Task: "☑️", Incident: "🚨" };
+export const PRIORITIES: Priority[] = ["Highest", "High", "Medium", "Low", "Lowest"];
+export const TYPES: IssueType[] = ["Bug", "Story", "Task", "Incident"];
+export const TYPE_GLYPH: Record<IssueType, string> = { Bug: "●", Story: "◆", Task: "■", Incident: "▲" };
+export const TYPE_COLOR: Record<IssueType, string> = {
+  Bug: "var(--danger)",
+  Story: "var(--success)",
+  Task: "var(--accent)",
+  Incident: "var(--warning)",
+};
+
+export function slug(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, "-");
+}

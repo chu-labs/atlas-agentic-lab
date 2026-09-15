@@ -41,7 +41,13 @@ def _user_or_404(c, handle: str) -> dict:
 def _full_issue(c, issue: dict) -> dict:
     activity = repo.issue_activity(c, issue["id"])
     counts = {k: sum(1 for a in activity if a["kind"] == k) for k in domain.ACTIVITY_KINDS}
-    return {**issue, "activity": activity, "comments": repo.issue_comments(c, issue["id"]), "counts": counts}
+    return {
+        **issue,
+        "activity": activity,
+        "comments": repo.issue_comments(c, issue["id"]),
+        "counts": counts,
+        "allowed_transitions": [s for s in domain.STATUSES if s in domain.allowed_transitions(issue["status"])],
+    }
 
 
 # ---------------------------------------------------------------- users

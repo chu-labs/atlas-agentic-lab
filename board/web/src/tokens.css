@@ -1,0 +1,46 @@
+/* atlas design system tokens — shared with Mission Control. Keep in sync. */
+:root {
+  --bg: #0b0f17;
+  --surface: #111826;
+  --surface-2: #172033;
+  --border: #223049;
+  --text: #e6eaf2;
+  --muted: #8b97ad;
+  --dim: #5b6780;
+  --accent: #3b82f6;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #a855f7;
+
+  --status-backlog: #64748b;
+  --status-triage: #f59e0b;
+  --status-in-progress: #3b82f6;
+  --status-in-review: #a855f7;
+  --status-done: #22c55e;
+
+  --prio-highest: #ef4444;
+  --prio-high: #f97316;
+  --prio-medium: #f59e0b;
+  --prio-low: #3b82f6;
+  --prio-lowest: #64748b;
+
+  --radius: 6px;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-6: 24px;
+  --row: 32px;
+  --topbar: 48px;
+
+  --font: "Inter", -apple-system, "Segoe UI", system-ui, Helvetica, Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --fs-base: 15px;
+  --fs-table: 14px;
+  --fs-small: 12px;
+  --fs-title: 12px;
+
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
