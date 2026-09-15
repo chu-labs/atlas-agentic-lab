@@ -107,7 +107,7 @@ English on the ticket, which the audience reads live.
 
 ## 7. What is on screen (assets available to the presentation)
 
-Screenshots are in `docs/assets/` of the `chu-labs/atlas-agentic-lab` repository: `mc-v4-ops.png` (Operations), `mc-v4-eng.png` (Engineering with the gate), `mc-v3-board.png` (Board), `mc-v3-cicd.png`, `mc-v3-dora.png`, `mc-v2-drawer-pr.png` (stage drawer), `mc-v2-compare.png` (then vs now overlay), `mc-v2-agent.png` (an agent's reasoning). Videos are in `recordings/` (not in git: `clean-run.mp4`, `workbench-run.mp4`; ask Maroun).
+Screenshots are in `docs/assets/` of the `chu-labs/atlas-agentic-lab` repository. Current design (use these): `mc-v5-ops.png` (Operations console), `mc-v5-eng.png` (Engineering with the gate), `mc-v5-board.png` (Board tab), `board-v2-board.png`, `board-v2-table.png`, `board-v2-issue.png` (the standalone board and an issue page). Older but still accurate for specific elements: `mc-v3-cicd.png`, `mc-v3-dora.png`, `mc-v2-drawer-pr.png` (stage drawer), `mc-v2-compare.png` (then vs now overlay), `mc-v2-agent.png` (an agent's reasoning). Videos are in `recordings/` (not in git: `clean-run.mp4`, `workbench-run.mp4`; ask Maroun).
 
 Screenshots (1920x1080, dark theme) exist for: the human gate waiting, the stage drawer showing a PR's
 artefacts and who acted with what authority, the Compare overlay (then vs now), the Operations view (production
@@ -115,7 +115,7 @@ signal by kind, live error clusters, service health), the Engineering view (pipe
 work), the Board tab (agents as first-class assignees), CI/CD, and DORA. Two MP4 fallback videos exist: the
 clean autonomous run and the Workbench run, replayed into the dashboard at 4x.
 
-Dashboard layout for reference: a pipeline row per ticket with eleven stages (Error, Triage, Ticket, Code,
+Dashboard layout for reference (v5, dense console style: 48px top bar, left rail with views and fleet, KPI strips, sortable data tables, sparklines): a pipeline row per ticket with eleven stages (Error, Triage, Ticket, Code,
 Test, PR, **Human gate**, Merge, Deploy, Verify, Closed); the human gate is amber, larger, with a person icon.
 Fleet cards with robot avatars and authority badges. A timeline where human rows are visibly different. A
 then-vs-now panel with a big ratio ("~14 days → 7:39").

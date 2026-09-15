@@ -79,6 +79,16 @@ acts on the board as the `maroun` handle (the GitHub login is not a board user).
 policy so its own check is not an error source. The Board-driven path was proven live: the owner assigned a
 human-filed ticket to Forge from the Board and approved the PR at the gate themselves.
 
+## 16 Sep 2026: v5 console redesign
+
+Owner: "amateurish, wasted space; professional admin feel with rich data". Both front ends were restyled to one
+design system (`web/src/tokens.css` in each: #0B0F17 background, #111826 surface, #223049 border, Inter + JetBrains
+Mono, 15px base, 32px table rows, 4px grid) with shared components (DataTable, KpiTile, StatusChip, Sparkline,
+MiniBar, Popover, Drawer, FilterBar). Mission Control v5: 48px top bar with global search, left rail with views and
+fleet, KPI strips with 10-minute sparklines, service-health and cluster tables, work table with per-stage chips.
+atlas-board v2: sprint selector and summary, filter bar, swimlanes, table and timeline views, a full issue page with
+transition buttons and source evidence. Sprint dates shifted so the lecture day sits inside the active sprint.
+
 ## Extras status
 
 Built: the agent that says no (40 s live), cost per ticket, audit trail (stage drawer), parallel fleet (`labctl demo storm` / `labctl scale forge 3`), DORA panel (v3), CI/CD view (v3). Available but not rehearsed: the agent that gets caught (label a ticket `review:strict`). Not built: spec-to-PR as a dedicated flow (the Board tab's New-ticket form assigned to Forge is the manual version), a deliberate guardrail trip (the `guard()` mechanism exists; no trigger command).
