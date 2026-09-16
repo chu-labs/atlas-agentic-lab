@@ -32,9 +32,14 @@ def _last_event_id(c: httpx.Client) -> int:
     return ev[-1]["id"] if ev else 0
 
 
-def watch(after: int, *, approve_on_key: bool = True, until_terminal: bool = True, timeout: int = 2400) -> str | None:
-    """Stream events after `after` to the terminal. Returns the terminal event type, or None on timeout."""
-    t0 = time.time()
+def watch(after: int, *, approve_on_key: bool = True, until_terminal: bool = True, timeout: int = 2400,
+          ignore_tickets: set[str] | None = None, t0: float | None = None) -> str | None:
+    """Stream events after `after` to the terminal. Returns the terminal event type, or None on timeout.
+
+    `ignore_tickets`: tickets whose terminal events (e.g. a deliberate escalation) must not end the watch.
+    """
+    t0 = t0 or time.time()
+    ignore_tickets = ignore_tickets or set()
     seen_errors = 0
     last_error_line = 0
     gate_pr: int | None = None
@@ -63,7 +68,7 @@ def watch(after: int, *, approve_on_key: bool = True, until_terminal: bool = Tru
                 if dt == "human.gate_waiting":
                     gate_pr = ((e.get("detail") or {}).get("pr") or {}).get("number")
                     console.print(f"[bold yellow]▶ WAITING ON YOU: approve PR #{gate_pr} on the dashboard" + (" (or type A + Enter here)" if approve_on_key else "") + "[/]")
-                if dt in TERMINAL and until_terminal:
+                if dt in TERMINAL and until_terminal and e.get("ticket") not in ignore_tickets:
                     console.print(f"[bold]■ {dt} after {_el(t0)}[/]")
                     return dt
             if gate_pr and approve_on_key and _key_pressed():

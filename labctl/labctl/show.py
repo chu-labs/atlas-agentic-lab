@@ -45,9 +45,11 @@ def run(*, with_ambiguous: bool = True, skip_reset: bool = False, rps: float = 3
     name = time.strftime("lecture-%Y%m%d-%H%M")
     console.print(f"recording as [bold]{name}[/]")
 
+    ignore: set[str] = set()
     if with_ambiguous:
         d = defects.get("ambiguous-high-rise")
         key = defects._file_ticket(d["ticket"], {"kind": "human_report", "defect": d["id"]})
+        ignore.add(key)
         _say(f"{_el(t0)}  A human just filed {key}: \"{d['ticket']['title']}\"\nWatch Forge read the code and refuse.", "bold magenta")
 
     _say(f"{_el(t0)}  Shipping the off-by-one bug to production (build + rollout ≈ 90 s).\nTalk: nobody has been told; traffic is live.", "bold yellow")
@@ -57,7 +59,7 @@ def run(*, with_ambiguous: bool = True, skip_reset: bool = False, rps: float = 3
         traffic.start(o.urls["atlas-platform"], u, p, rps)
     _say(f"{_el(t0)}  The bug is live. From here on it is the agents' turn.\nScout → ticket · Forge → failing test, fix, PR · Sentinel → review · then YOU at the gate.", "bold green")
 
-    end = demo.watch(after, approve_on_key=True, until_terminal=True, timeout=2400)
+    end = demo.watch(after, approve_on_key=True, until_terminal=True, timeout=2400, ignore_tickets=ignore, t0=t0)
     if end:
         _say(f"{_el(t0)}  Run finished: {end}", "bold green")
     else:
