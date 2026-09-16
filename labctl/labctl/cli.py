@@ -443,6 +443,16 @@ def chaos_outage(service, seconds):
 
 
 @main.command()
+@click.option("--no-ambiguous", is_flag=True, help="Skip the 'agent says no' opener")
+@click.option("--skip-reset", is_flag=True, help="Do not reset even if something is injected")
+def show(no_ambiguous, skip_reset):
+    """The lecture in one command: files the 'says no' ticket, ships the bug, narrates; you only approve."""
+    from . import show as s
+
+    s.run(with_ambiguous=not no_ambiguous, skip_reset=skip_reset)
+
+
+@main.command()
 def outputs():
     """Show Terraform outputs the lab runs on."""
     from .config import outputs as o
