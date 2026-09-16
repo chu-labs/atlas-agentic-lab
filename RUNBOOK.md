@@ -95,10 +95,18 @@ Forge should escalate, not fix. `zero-lots` also flips three buildings to zero l
 - To show three engineering agents working at once: `labctl scale forge 3` and inject or file three tickets;
   SQS hands one ticket to each Forge task.
 
-## 3. On the day: the eight-minute run
+## 3. On the day: one command
 
-See `RUN_OF_SHOW.md`. In short: `labctl inject off-by-one`, talk, approve at the gate, let Conductor
-close it.
+```
+aws sso login
+cd atlas-agentic-lab/labctl
+uv run labctl show
+```
+`show` does the preflight (reset if needed, traffic, recording), files the "premiums over 20 floors" ticket so
+Forge is visibly refusing inside the first minute, ships the off-by-one bug, and narrates in large type. Your
+only job: when it prints WAITING ON YOU (about 5–6 minutes in), click **Approve** on Mission Control, or type
+`a` and Enter in the terminal. It then narrates deploy → verify → closed and saves the recording. Afterwards:
+`uv run labctl reset`. See `RUN_OF_SHOW.md` for what to say while it runs.
 
 ## 4. Failure modes and what to do
 

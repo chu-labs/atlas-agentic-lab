@@ -3,13 +3,14 @@
 Projector: Mission Control full screen (`http://<alb>/`), the board on a second tab (`:8081`), the
 Workbench tmux session on a third window. Laptop terminal: `labctl` ready, `labctl status` green.
 
-Before you walk on: `labctl reset` done, `labctl traffic status` running, `labctl record mark`
-run, fallback recording `clean-run` listed by `labctl record list`.
+Before you walk on: `aws sso login` done, `labctl status` green, fallback recording `clean-run` listed by
+`labctl record list`. The whole demo is one command, `labctl show`; it resets, starts traffic, records, files
+the "says no" ticket, ships the bug and narrates. You only approve.
 
 | Clock | What happens | What you say |
 |---|---|---|
 | 0:00 | Dashboard up: fleet idle, queues at zero, pipeline dark. | "This is a real strata insurance service in production, with real synthetic traffic. Nobody on the team is at a keyboard. Watch the top row." |
-| 0:15 | `labctl demo run off-by-one` (build + rollout ≈ 70 s; talk over it; the terminal narrates the same events as the dashboard). | "I have just shipped a bug. One line. Renewals due exactly thirty days out fall out of the renewal run. Nobody knows yet." |
+| 0:15 | `labctl show` (the terminal narrates the same events as the dashboard). In the first minute Forge picks up the "premiums over 20 floors" ticket and refuses it; use that while the bug builds. | "I have just shipped a bug. One line. Renewals due exactly thirty days out fall out of the renewal run. Nobody knows yet." |
 | 1:30 | Production errors counter climbs. Scout's card goes *working*; its thinking line reads. | "Scout watches the error queue. It is deciding whether this is noise or a problem. It can open tickets without asking anyone, because a ticket is cheap and reversible." |
 | 2:00 | Ticket appears on the board (switch tab for 10 s). Read the reproduction. | "That ticket was written by a machine. Reproduction, stack trace, customer impact. Assigned to Forge." |
 | 2:15 | Forge: *Cloning… reading CLAUDE.md*. Pipeline at **code**. | "Forge has an onboarding document, the same one a new engineer gets. Read the rules on screen: failing test first, never change business rules, never touch migrations." |
