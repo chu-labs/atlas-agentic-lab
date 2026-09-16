@@ -11,12 +11,22 @@ resource "aws_ecr_repository" "img" {
 resource "aws_ecr_lifecycle_policy" "img" {
   for_each   = local.images
   repository = aws_ecr_repository.img[each.key].name
+  # Only defect builds and untagged layers expire; baseline and release images are never evicted,
+  # so `labctl reset` can always roll back.
   policy = jsonencode({
-    rules = [{
-      rulePriority = 1
-      description  = "keep last 10"
-      selection    = { tagStatus = "any", countType = "imageCountMoreThan", countNumber = 10 }
-      action       = { type = "expire" }
-    }]
+    rules = [
+      {
+        rulePriority = 1
+        description  = "keep the last 8 defect builds"
+        selection    = { tagStatus = "tagged", tagPrefixList = ["defect-"], countType = "imageCountMoreThan", countNumber = 8 }
+        action       = { type = "expire" }
+      },
+      {
+        rulePriority = 2
+        description  = "untagged layers expire after a day"
+        selection    = { tagStatus = "untagged", countType = "sinceImagePushed", countUnit = "days", countNumber = 1 }
+        action       = { type = "expire" }
+      },
+    ]
   })
 }

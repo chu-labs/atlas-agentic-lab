@@ -63,7 +63,8 @@ def baseline_set(image: str | None = None, force: bool = False) -> dict:
     if st.get("injected") and not (image or force):
         raise SystemExit(f"{st['injected']['id']} is injected; production is not clean. Run `labctl reset` first, or pass --image.")
     ensure_clone()
-    sha = _git("rev-parse", "origin/main")
+    # While a defect is injected, origin/main carries the defect commit: keep the previously recorded clean SHA.
+    sha = st["baseline_sha"] if st.get("injected") and st.get("baseline_sha") else _git("rev-parse", "origin/main")
     image = image or ecs.current_image("atlas-platform")
     if "defect-" in image and not force:
         raise SystemExit(f"running image {image} is a defect build; deploy a clean build first (labctl deploy atlas-platform) or pass --force")

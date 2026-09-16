@@ -58,7 +58,8 @@ def secrets_status():
 @click.option("--tag", default=None, help="Image tag; default is the git short SHA of the context")
 @click.option("--no-wait", is_flag=True)
 @click.option("--desired", type=int, default=1)
-def deploy(image, tag, no_wait, desired):
+@click.option("--push-only", is_flag=True, help="Build and push only; do not roll out")
+def deploy(image, tag, no_wait, desired, push_only):
     """Build an image for arm64, push it to ECR and roll it out to its services."""
     import subprocess
 
@@ -68,6 +69,9 @@ def deploy(image, tag, no_wait, desired):
     tag = tag or subprocess.run(["git", "rev-parse", "--short=12", "HEAD"], cwd=spec["context"], capture_output=True, text=True).stdout.strip() or "manual"
     console.print(f"building [bold]{image}[/] from {spec['context']} as :{tag}")
     ref = ecs.build_and_push(image, tag)
+    if push_only:
+        console.print(f"[green]pushed[/] {ref}")
+        return
     for svc in spec["services"]:
         arn = ecs.register_revision(svc, ref)
         console.print(f"  {svc}: {arn.rsplit('/',1)[-1]} -> desired {desired}")
