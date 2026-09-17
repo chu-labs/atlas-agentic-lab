@@ -1,0 +1,2703 @@
+[
+ {
+  "time": "2026-09-15T22:15:17.268Z",
+  "detail": {
+   "ts": "2026-09-15T22:15:17.268224+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "watchtower",
+    "display_name": "Watchtower"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_page_humans": true,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "severity_1",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.watchtower",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:15:59.031Z",
+  "detail": {
+   "ts": "2026-09-15T22:15:59.031759+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "sentinel",
+    "display_name": "Sentinel"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": true,
+    "can_approve": false,
+    "can_write_code": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "security_impact"
+    ],
+    "can_request_changes": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": false
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.sentinel",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:16:54.138Z",
+  "detail": {
+   "ts": "2026-09-15T22:16:54.138243+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "watchtower",
+    "display_name": "Watchtower"
+   },
+   "status": "idle",
+   "summary": "Watchtower online. When the error rate crosses a threshold, opens an incident, keeps a running timeline, and drafts a blameless postmortem.",
+   "thinking": "Watchtower online. When the error rate crosses a threshold, opens an incident, keeps a running timeline, and drafts a blameless postmortem.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_page_humans": true,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "severity_1",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.watchtower",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:16:57.342Z",
+  "detail": {
+   "ts": "2026-09-15T22:16:57.342855+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "conductor",
+    "display_name": "Conductor"
+   },
+   "status": "idle",
+   "summary": "Conductor online. After a human merges, watches the deploy, smoke-checks production, confirms the error is gone, and closes the ticket.",
+   "thinking": "Conductor online. After a human merges, watches the deploy, smoke-checks production, confirms the error is gone, and closes the ticket.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": true,
+    "can_review": false,
+    "can_write_code": false,
+    "can_close_tickets": true,
+    "can_create_tickets": false,
+    "can_reopen_tickets": true,
+    "must_escalate_when": [
+     "verification_failed",
+     "rollback_needed"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.conductor",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:17:02.557Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:02.557374+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "idle",
+   "summary": "Scout online. Watches the production error queue, clusters errors into incidents, and opens well-written bug tickets.",
+   "thinking": "Scout online. Watches the production error queue, clusters errors into incidents, and opens well-written bug tickets.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:17:08.668Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:08.668376+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "idle",
+   "summary": "Forge online. Picks up bug tickets, reproduces them with a failing test, fixes them, and opens a pull request.",
+   "thinking": "Forge online. Picks up bug tickets, reproduces them with a failing test, fixes them, and opens a pull request.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:17:15.746Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:15.746890+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "watchtower",
+    "display_name": "Watchtower"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_page_humans": true,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "severity_1",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.watchtower",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:17:19.053Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:19.053258+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "conductor",
+    "display_name": "Conductor"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": true,
+    "can_review": false,
+    "can_write_code": false,
+    "can_close_tickets": true,
+    "can_create_tickets": false,
+    "can_reopen_tickets": true,
+    "must_escalate_when": [
+     "verification_failed",
+     "rollback_needed"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.conductor",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:17:24.218Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:24.218314+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:17:27.443Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:27.443601+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=30",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "116ce3e86d6e4e18",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 4
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:17:28.881Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:28.881874+00:00",
+   "kind": "performance",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=30",
+   "stack": "",
+   "method": "GET",
+   "message": "GET /api/renewals/reconcile took 1451 ms (threshold 1000 ms)",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:SlowRequest",
+   "elapsed_ms": 1451,
+   "error_type": "SlowRequest",
+   "request_id": "116ce3e86d6e4e18",
+   "environment": "local",
+   "status_code": 200,
+   "customer_impact": 1
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:17:28.984Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:28.984105+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:17:42.924Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:42.924106+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=30",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "ee1320ce2a5347cb",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 4
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:17:43.919Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:43.919186+00:00",
+   "sha": "8e42e6877933dd4dee4c4123ff767dbf1eb430e6",
+   "actor": {
+    "kind": "human",
+    "mode": null,
+    "handle": "maroun",
+    "display_name": "Maroun"
+   },
+   "image": "336881700625.dkr.ecr.ap-southeast-2.amazonaws.com/atlas-agentic-lab/atlas-platform:defect-off-by-one-8e42e687",
+   "defect": "off-by-one",
+   "summary": "Injected defect 'off-by-one' into production (Renewal window drops policies due exactly 30 days out)"
+  },
+  "source": "atlas.lab",
+  "detail-type": "defect.injected"
+ },
+ {
+  "time": "2026-09-15T22:17:52.357Z",
+  "detail": {
+   "ts": "2026-09-15T22:17:52.357284+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "sentinel",
+    "display_name": "Sentinel"
+   },
+   "status": "idle",
+   "summary": "Sentinel online. Reviews Forge's pull requests independently for correctness, test quality, scope and security.",
+   "thinking": "Sentinel online. Reviews Forge's pull requests independently for correctness, test quality, scope and security.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": true,
+    "can_approve": false,
+    "can_write_code": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "security_impact"
+    ],
+    "can_request_changes": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": false
+   }
+  },
+  "source": "atlas.sentinel",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:03.551Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:03.551135+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=30",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "be395f05feb54f46",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 4
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:18:03.595Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:03.595635+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "working",
+   "summary": "Seen 3 business rule errors on GET /api/renewals/reconcile (BusinessRuleViolation) in the last 5 minutes. No open ticket matches this signature, so I am assessing it.",
+   "thinking": "Seen 3 business rule errors on GET /api/renewals/reconcile (BusinessRuleViolation) in the last 5 minutes. No open ticket matches this signature, so I am assessing it.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:13.575Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:13.575009+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "sentinel",
+    "display_name": "Sentinel"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": true,
+    "can_approve": false,
+    "can_write_code": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "security_impact"
+    ],
+    "can_request_changes": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": false
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.sentinel",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:15.803Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:15.803818+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "watchtower",
+    "display_name": "Watchtower"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_page_humans": true,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "severity_1",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.watchtower",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:19.110Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:19.110025+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "conductor",
+    "display_name": "Conductor"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": true,
+    "can_review": false,
+    "can_write_code": false,
+    "can_close_tickets": true,
+    "can_create_tickets": false,
+    "can_reopen_tickets": true,
+    "must_escalate_when": [
+     "verification_failed",
+     "rollback_needed"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.conductor",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:20.988Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:20.988383+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=60",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 9 active policies expiring on 2026-11-15 are missing from the 60-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 9 active policies expiring on 2026-11-15 are missing from the 60-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "9b1debd79c7e4c39",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 9
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:18:22.643Z",
+  "detail": {
+   "to": "forge",
+   "ts": "2026-09-15T22:18:22.643Z",
+   "lab": "atlas-agentic-lab",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "issue": {
+    "key": "ATLAS-37",
+    "type": "Bug",
+    "title": "Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run",
+    "labels": [
+     "production",
+     "business_rule",
+     "sig:590d9629"
+    ],
+    "pr_url": null,
+    "status": "Triage",
+    "assignee": "forge",
+    "priority": "High"
+   },
+   "ticket": "ATLAS-37",
+   "summary": "Assigned ATLAS-37 to Forge",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.board",
+  "detail-type": "issue.assigned"
+ },
+ {
+  "time": "2026-09-15T22:18:21.960Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:21.960Z",
+   "lab": "atlas-agentic-lab",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "issue": {
+    "key": "ATLAS-37",
+    "type": "Bug",
+    "title": "Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run",
+    "labels": [
+     "production",
+     "business_rule",
+     "sig:590d9629"
+    ],
+    "pr_url": null,
+    "status": "Triage",
+    "assignee": "forge",
+    "priority": "High"
+   },
+   "ticket": "ATLAS-37",
+   "summary": "Opened ATLAS-37: Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.board",
+  "detail-type": "issue.created"
+ },
+ {
+  "time": "2026-09-15T22:18:22.728Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:22.728378+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "This is a 422 business rule failure, not a crash, but it means /api/renewals/reconcile cannot complete while these policies are unaccounted for, which blocks the renewal process for real customers.",
+   "thinking": "This is a 422 business rule failure, not a crash, but it means /api/renewals/reconcile cannot complete while these policies are unaccounted for, which blocks the renewal process for real customers.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.027117,
+    "seconds": 18.285029839000003,
+    "tokens_in": 1959,
+    "tokens_out": 1416,
+    "model_calls": 1
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:22.673Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:22.673719+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "I saw the same BusinessRuleViolation fire 3 times in a row, each time flagging the same 4 active policies expiring on 2026-10-16 as missing from the 30-day renewal run.",
+   "thinking": "I saw the same BusinessRuleViolation fire 3 times in a row, each time flagging the same 4 active policies expiring on 2026-10-16 as missing from the 30-day renewal run.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.027117,
+    "seconds": 18.285029839000003,
+    "tokens_in": 1959,
+    "tokens_out": 1416,
+    "model_calls": 1
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:22.750Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:22.750269+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Customer impact is recorded as 12 across the sample requests (4 per call x 3 calls), all tied to the same policy set, so this is a repeated failure on one root cause rather than 12 separate customers.",
+   "thinking": "Customer impact is recorded as 12 across the sample requests (4 per call x 3 calls), all tied to the same policy set, so this is a repeated failure on one root cause rather than 12 separate customers.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.027117,
+    "seconds": 18.285029839000003,
+    "tokens_in": 1959,
+    "tokens_out": 1416,
+    "model_calls": 1
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:22.829Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:22.829493+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Created ATLAS-37 at priority High and assigned it to Forge. Creating a ticket is cheap and reversible, so I do this without asking.",
+   "thinking": "Created ATLAS-37 at priority High and assigned it to Forge. Creating a ticket is cheap and reversible, so I do this without asking.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.027117,
+    "seconds": 18.285029839000003,
+    "tokens_in": 1959,
+    "tokens_out": 1416,
+    "model_calls": 1
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:22.791Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:22.791977+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "I'm opening a ticket now because the pattern is consistent (3/3 occurrences, same date, same count) and points to a specific gap in the renewal run logic worth investigating before the 2026-10-16 expiry date arrives.",
+   "thinking": "I'm opening a ticket now because the pattern is consistent (3/3 occurrences, same date, same count) and points to a specific gap in the renewal run logic worth investigating before the 2026-10-16 expiry date arrives.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.027117,
+    "seconds": 18.285029839000003,
+    "tokens_in": 1959,
+    "tokens_out": 1416,
+    "model_calls": 1
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:22.773Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:22.773084+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Renewal reconciliation failing silently or blocking is high risk for an insurance platform because missed renewals can mean lapsed cover, so I'm rating this High rather than Medium.",
+   "thinking": "Renewal reconciliation failing silently or blocking is high risk for an insurance platform because missed renewals can mean lapsed cover, so I'm rating this High rather than Medium.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.027117,
+    "seconds": 18.285029839000003,
+    "tokens_in": 1959,
+    "tokens_out": 1416,
+    "model_calls": 1
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:22.857Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:22.857638+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "idle",
+   "ticket": "ATLAS-37",
+   "summary": "Ticketed ATLAS-37. Back to watching the queue.",
+   "thinking": "Ticketed ATLAS-37. Back to watching the queue.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.027117,
+    "seconds": 18.285029839000003,
+    "tokens_in": 1959,
+    "tokens_out": 1416,
+    "model_calls": 1
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:22.839Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:22.839366+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "issue": {
+    "key": "ATLAS-37",
+    "type": "Bug",
+    "title": "Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run",
+    "priority": "High"
+   },
+   "ticket": "ATLAS-37",
+   "summary": "Opened ATLAS-37: Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run",
+   "incident": {
+    "count": 3,
+    "cluster": "rule:renewals.window_mismatch",
+    "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+    "first_seen": "2026-09-15T22:17:27.443601+00:00",
+    "signatures": [
+     "/api/renewals/reconcile:BusinessRuleViolation"
+    ],
+    "customer_impact": 12
+   },
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.027117,
+    "seconds": 18.285029839000003,
+    "tokens_in": 1959,
+    "tokens_out": 1416,
+    "model_calls": 1
+   }
+  },
+  "source": "atlas.scout",
+  "detail-type": "incident.opened"
+ },
+ {
+  "time": "2026-09-15T22:18:22.791Z",
+  "detail": {
+   "to": "In Progress",
+   "ts": "2026-09-15T22:18:22.791Z",
+   "lab": "atlas-agentic-lab",
+   "from": "Triage",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "issue": {
+    "key": "ATLAS-37",
+    "type": "Bug",
+    "title": "Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run",
+    "labels": [
+     "production",
+     "business_rule",
+     "sig:590d9629"
+    ],
+    "pr_url": null,
+    "status": "In Progress",
+    "assignee": "forge",
+    "priority": "High"
+   },
+   "ticket": "ATLAS-37",
+   "summary": "Moved ATLAS-37 from Triage to In Progress",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.board",
+  "detail-type": "issue.transitioned"
+ },
+ {
+  "time": "2026-09-15T22:18:23.464Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:23.464951+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Picked up ATLAS-37 from the queue: \"Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run\". Cloning atlas-platform and reading CLAUDE.md before I touch anything.",
+   "thinking": "Picked up ATLAS-37 from the queue: \"Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run\". Cloning atlas-platform and reading CLAUDE.md before I touch anything.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:30.757Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:30.757012+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "branch": "fix/ATLAS-37-renewals-reconcile-fails-4-policies-expi",
+   "ticket": "ATLAS-37",
+   "summary": "Created branch fix/ATLAS-37-renewals-reconcile-fails-4-policies-expi in a fresh clone",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "branch.created"
+ },
+ {
+  "time": "2026-09-15T22:18:33.971Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:33.971089+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Reading ../work/ATLAS-37/atlas/domain/renewals.py",
+   "thinking": "Reading ../work/ATLAS-37/atlas/domain/renewals.py",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:34.685Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:34.685114+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Reading ../work/ATLAS-37/atlas/api/routes.py",
+   "thinking": "Reading ../work/ATLAS-37/atlas/api/routes.py",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:41.914Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:41.914005+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: git show 8e42e68 -- atlas/domain/renewals.py tests/test_renewals.py | head -150",
+   "thinking": "Running: git show 8e42e68 -- atlas/domain/renewals.py tests/test_renewals.py | head -150",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:42.327Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:42.327212+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: git log --oneline -- tests/test_renewals.py | head -20",
+   "thinking": "Running: git log --oneline -- tests/test_renewals.py | head -20",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:42.914Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:42.914040+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:18:43.901Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:43.901106+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=30",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "abae3f275d464eb9",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 4
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:18:58.666Z",
+  "detail": {
+   "ts": "2026-09-15T22:18:58.666175+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=14",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 7 active policies expiring on 2026-09-30 are missing from the 14-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 7 active policies expiring on 2026-09-30 are missing from the 14-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "d0fe612e633846da",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 7
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:19:02.222Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:02.222898+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "## Investigation\n\nThe reconcile endpoint (`atlas/api/routes.py:52-71`) compares two things:\n- `in_run`: policies caught by `renewals.renewal_window(today, days)` (what the actual renewal-run query uses)\n- `expected`: policies directly queried between `today` and `today + timedelta(days=days)` (a raw, independent cross-check)\n\nAny policy expiring exactly on day `days` (e.g., day 30) will be in `expected` but only in `in_run` if `renewal_window` includes that boundary.\n\nLooking at `atlas/domain/renewals.py:17-23`:\n```python\ndef renewal_window(today: date, days: int) -> tuple[date, date]:\n    \"\"\"Inclusive [today, today + days] window ...\n    A policy expiring exactly `days` days from today is in the run. This boundary is documented\n    intent (see CLAUDE.md) ...\n    \"\"\"\n    return today, today + timedelta(days=days - 1)\n```\n\nThe docstring says the window is `(today, today + days)` \u2014 that's exactly what CLAUDE.md states as documented intent \u2014 but the implementation returns `today + days - 1`. That's a one-day-short window, so any policy expiring exactly `days` days out is silently excluded from the renewal run while still being counted by the reconcile control's independent `expected` query. That's precisely the 4-policy, single-date mismatch the ticket reports.\n\nI checked git history and found the regression's origin directly:\n\n```\ncommit 8e42e68 \"Simplify renewal window arithmetic\"\n-    return today, today + timedelta(days=days)\n+    return today, today + timedelta(days=days - 1)\n```\n\nThe same commit also gutted `tests/test_renewals.py`'s `test_window_is_inclusive_of_both_ends` (renamed to `test_window_bounds`), deleting exactly the assertions that would have caught this: the `renewal_window(today, 30) == (..., date(2026, 10, 1))` check and the \"exactly 30 days out is due\" assertion. It also silently changed a third test's expectation from `date(2026, 10, 1)` to `date(2026, 9, 30)` to match the broken behavior rather than flag it.\n\nThis matches CLAUDE.md's explicit carve-out almost verbatim: *\"A recent commit that broke one of these [documented facts] and removed the test guarding it is a regression to fix, not a policy change.\"* The inclusive-both-ends window is called out by name as documented intent, and the reconcile endpoint is called out as \"the control that proves it.\" There's no ambiguity about desired behavior here \u2014 the code, the docstring, the removed test, and CLAUDE.md all agree on what's correct; only the one line of arithmetic disagrees. This is a straightforward off-by-one fix, not a business-rule change.\n\nPlan is to revert the arithmetic to `today + timedelta(days=days)` and restore the deleted/weakened test assertions (writing the failing test first per the CLAUDE.md workflow), then run the full suite and ruff.\n\n```json\n{\"decision\": \"fix\", \"category\": \"off-by-one regression in renewal window boundary\", \"root_cause_hypothesis\": \"Commit 8e42e68 changed renewal_window's end date from today+days to today+days-1 while leaving the docstring and CLAUDE.md's documented inclusive-both-ends rule unchanged, and it deleted the test assertions that would have caught the discrepancy; the reconcile control's independent expected-count query still uses today+days, exposing the mismatch for policies expiring exactly on the window boundary.\", \"plan\": [\"Write/restore a failing test in tests/test_renewals.py asserting renewal_window(date(2026,9,1), 30) == (date(2026,9,1), date(2026,10,1)) and that a policy expiring exactly 30 days out is_due; run it to confirm it fails\", \"Fix atlas/domain/renewals.py renewal_window to return (today, today + timedelta(days=days)) instead of days-1\", \"Restore the test_late_evening_sydney_renewal_is_not_pulled_a_day_early assertion back to expiry_date=date(2026,10,1)\", \"Run full pytest suite and ruff check atlas tests\", \"Manually sanity-check GET /api/renewals/reconcile?days=30 logic against the 2026-10-16 scenario\"], \"files\": [\"atlas/domain/renewals.py\", \"tests/test_renewals.py\"]}\n```",
+   "thinking": "## Investigation\n\nThe reconcile endpoint (`atlas/api/routes.py:52-71`) compares two things:\n- `in_run`: policies caught by `renewals.renewal_window(today, days)` (what the actual renewal-run query uses)\n- `expected`: policies directly queried between `today` and `today + timedelta(days=days)` (a raw, independent cross-check)\n\nAny policy expiring exactly on day `days` (e.g., day 30) will be in `expected` but only in `in_run` if `renewal_window` includes that boundary.\n\nLooking at `atlas/domain/renewals.py:17-23`:\n```python\ndef renewal_window(today: date, days: int) -> tuple[date, date]:\n    \"\"\"Inclusive [today, today + days] window ...\n    A policy expiring exactly `days` days from today is in the run. This boundary is documented\n    intent (see CLAUDE.md) ...\n    \"\"\"\n    return today, today + timedelta(days=days - 1)\n```\n\nThe docstring says the window is `(today, today + days)` \u2014 that's exactly what CLAUDE.md states as documented intent \u2014 but the implementation returns `today + days - 1`. That's a one-day-short window, so any policy expiring exactly `days` days out is silently excluded from the renewal run while still being counted by the reconcile control's independent `expected` query. That's precisely the 4-policy, single-date mismatch the ticket reports.\n\nI checked git history and found the regression's origin directly:\n\n```\ncommit 8e42e68 \"Simplify renewal window arithmetic\"\n-    return today, today + timedelta(days=days)\n+    return today, today + timedelta(days=days - 1)\n```\n\nThe same commit also gutted `tests/test_renewals.py`'s `test_window_is_inclusive_of_both_ends` (renamed to `test_window_bounds`), deleting exactly the assertions that would have caught this: the `renewal_window(today, 30) == (..., date(2026, 10, 1))` check and the \"exactly 30 days out is due\" assertion. It also silently changed a third test's expectation from `date(2026, 10, 1)` to `date(2026, 9, 30)` to match the broken behavior rather than flag it.\n\nThis matches CLAUDE.md's explicit carve-out almost verbatim: *\"A recent commit that broke one of these [documented facts] and removed the test guarding it is a regression to fix, not a policy change.\"* The inclusive-both-ends window is called out by name as documented intent, and the reconcile endpoint is called out as \"the control that proves it.\" There's no ambiguity about desired behavior here \u2014 the code, the docstring, the removed test, and CLAUDE.md all agree on what's correct; only the one line of arithmetic disagrees. This is a straightforward off-by-one fix, not a business-rule change.\n\nPlan is to revert the arithmetic to `today + timedelta(days=days)` and restore the deleted/weakened test assertions (writing the failing test first per the CLAUDE.md workflow), then run the full suite and ruff.\n\n```json\n{\"decision\": \"fix\", \"category\": \"off-by-one regression in renewal window boundary\", \"root_cause_hypothesis\": \"Commit 8e42e68 changed renewal_window's end date from today+days to today+days-1 while leaving the docstring and CLAUDE.md's documented inclusive-both-ends rule unchanged, and it deleted the test assertions that would have caught the discrepancy; the reconcile control's independent expected-count query still uses today+days, exposing the mismatch for policies expiring exactly on the window boundary.\", \"plan\": [\"Write/restore a failing test in tests/test_renewals.py asserting renewal_window(date(2026,9,1), 30) == (date(2026,9,1), date(2026,10,1)) and that a policy expiring exactly 30 days out is_due; run it to confirm it fails\", \"Fix atlas/domain/renewals.py renewal_window to return (today, today + timedelta(days=days)) instead of days-1\", \"Restore the test_late_evening_sydney_renewal_is_not_pulled_a_day_early assertion back to expiry_date=date(2026,10,1)\", \"Run full pytest suite and ruff check atlas tests\", \"Manually sanity-check GET /api/renewals/reconcile?days=30 logic against the 2026-10-16 scenario\"], \"files\": [\"atlas/domain/renewals.py\", \"tests/test_renewals.py\"]}\n```",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:03.463Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:03.463486+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=14",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 7 active policies expiring on 2026-09-30 are missing from the 14-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 7 active policies expiring on 2026-09-30 are missing from the 14-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "aa9c37e6fa274e25",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 7
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:19:05.623Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:05.623115+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: test -f CONTRIBUTING.md && cat CONTRIBUTING.md || echo \"no CONTRIBUTING.md\"",
+   "thinking": "Running: test -f CONTRIBUTING.md && cat CONTRIBUTING.md || echo \"no CONTRIBUTING.md\"",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:06.055Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:06.055924+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Reading ../work/ATLAS-37/tests/test_renewals.py",
+   "thinking": "Reading ../work/ATLAS-37/tests/test_renewals.py",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:11.922Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:11.922168+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Editing ../work/ATLAS-37/tests/test_renewals.py",
+   "thinking": "Editing ../work/ATLAS-37/tests/test_renewals.py",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:13.130Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:13.130015+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Editing ../work/ATLAS-37/tests/test_renewals.py",
+   "thinking": "Editing ../work/ATLAS-37/tests/test_renewals.py",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:13.620Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:13.620698+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "sentinel",
+    "display_name": "Sentinel"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": true,
+    "can_approve": false,
+    "can_write_code": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "security_impact"
+    ],
+    "can_request_changes": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": false
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.sentinel",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:14.594Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:14.594162+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Now let's run just this test to confirm it fails against the current buggy `renewal_window`.",
+   "thinking": "Now let's run just this test to confirm it fails against the current buggy `renewal_window`.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:15.412Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:15.412024+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: uv run pytest tests/test_renewals.py::test_window_is_inclusive_of_both_ends tests/test_renewals.py::test_late_evening_sy",
+   "thinking": "Running: uv run pytest tests/test_renewals.py::test_window_is_inclusive_of_both_ends tests/test_renewals.py::test_late_evening_sy",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:15.857Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:15.857537+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "watchtower",
+    "display_name": "Watchtower"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_page_humans": true,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "severity_1",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.watchtower",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:17.817Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:17.817284+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=14",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 7 active policies expiring on 2026-09-30 are missing from the 14-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 7 active policies expiring on 2026-09-30 are missing from the 14-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "b028e995c4024687",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 7
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:19:18.217Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:18.217986+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Both tests fail as expected, confirming the reproduction. Committing the test only.",
+   "thinking": "Both tests fail as expected, confirming the reproduction. Committing the test only.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:19.162Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:19.162577+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "conductor",
+    "display_name": "Conductor"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": true,
+    "can_review": false,
+    "can_write_code": false,
+    "can_close_tickets": true,
+    "can_create_tickets": false,
+    "can_reopen_tickets": true,
+    "must_escalate_when": [
+     "verification_failed",
+     "rollback_needed"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.conductor",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:19.196Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:19.196454+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: git add -A && git commit -m \"test: ATLAS-37 reproduce renewal window off-by-one at 30-day boundary\" 2>&1 | tail -20",
+   "thinking": "Running: git add -A && git commit -m \"test: ATLAS-37 reproduce renewal window off-by-one at 30-day boundary\" 2>&1 | tail -20",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:20.560Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:20.560736+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Now the fix: restore the correct arithmetic in `renewal_window`.",
+   "thinking": "Now the fix: restore the correct arithmetic in `renewal_window`.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:21.422Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:21.422975+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Editing ../work/ATLAS-37/atlas/domain/renewals.py",
+   "thinking": "Editing ../work/ATLAS-37/atlas/domain/renewals.py",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:22.827Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:22.827799+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: uv run pytest 2>&1 | tail -30",
+   "thinking": "Running: uv run pytest 2>&1 | tail -30",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:27.160Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:27.160021+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "All 38 tests pass. Now ruff.",
+   "thinking": "All 38 tests pass. Now ruff.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:27.290Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:27.290884+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: uv run ruff check atlas tests 2>&1 | tail -30",
+   "thinking": "Running: uv run ruff check atlas tests 2>&1 | tail -30",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:29.469Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:29.469219+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=30",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 4 active policies expiring on 2026-10-16 are missing from the 30-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "f2730ab1a09741d5",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 4
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:19:31.629Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:31.629190+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: git stash && uv run ruff check tests/test_api.py 2>&1 | tail -20; git stash pop",
+   "thinking": "Running: git stash && uv run ruff check tests/test_api.py 2>&1 | tail -20; git stash pop",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:33.501Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:33.501660+00:00",
+   "kind": "business_rule",
+   "path": "/api/renewals/reconcile",
+   "type": "error.raised",
+   "query": "days=60",
+   "stack": "Traceback (most recent call last):\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 144, in app\n    response = await f(request)\n               ^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 706, in app\n    raw_response = await run_endpoint_function(\n                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    ...<3 lines>...\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/fastapi/routing.py\", line 354, in run_endpoint_function\n    return await run_in_threadpool(dependant.call, **values)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/starlette/concurrency.py\", line 34, in run_in_threadpool\n    return await anyio.to_thread.run_sync(func)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/to_thread.py\", line 65, in run_sync\n    return await get_async_backend().run_sync_in_worker_thread(\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        func, args, abandon_on_cancel=abandon_on_cancel, limiter=limiter\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 2706, in run_sync_in_worker_thread\n    return await future\n           ^^^^^^^^^^^^\n  File \"/app/.venv/lib/python3.13/site-packages/anyio/_backends/_asyncio.py\", line 1100, in run\n    result = context.run(func, *args)\n  File \"/app/atlas/api/routes.py\", line 66, in reconcile_renewals\n    raise BusinessRuleViolation(\n    ...<3 lines>...\n    )\natlas.domain.errors.BusinessRuleViolation: renewals.window_mismatch: 9 active policies expiring on 2026-11-15 are missing from the 60-day renewal run\n",
+   "method": "GET",
+   "message": "renewals.window_mismatch: 9 active policies expiring on 2026-11-15 are missing from the 60-day renewal run",
+   "service": "atlas-platform",
+   "endpoint": "/api/renewals/reconcile",
+   "signature": "/api/renewals/reconcile:BusinessRuleViolation",
+   "error_type": "BusinessRuleViolation",
+   "request_id": "f96bf02e74a447fd",
+   "environment": "local",
+   "path_params": {},
+   "status_code": 422,
+   "customer_impact": 9
+  },
+  "source": "atlas.platform",
+  "detail-type": "error.raised"
+ },
+ {
+  "time": "2026-09-15T22:19:34.166Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:34.166977+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Confirmed: this ruff violation in `tests/test_api.py` is pre-existing, unrelated to this ticket, and not something I introduced. Per CLAUDE.md/CONTRIBUTING, I'll leave it alone and flag it under **Not changed** rather than widen the PR. Now committing the fix.",
+   "thinking": "Confirmed: this ruff violation in `tests/test_api.py` is pre-existing, unrelated to this ticket, and not something I introduced. Per CLAUDE.md/CONTRIBUTING, I'll leave it alone and flag it under **Not changed** rather than widen the PR. Now committing the fix.",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:34.492Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:34.492395+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: git diff atlas/domain/renewals.py",
+   "thinking": "Running: git diff atlas/domain/renewals.py",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:36.154Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:36.154170+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: git commit -am \"fix: ATLAS-37 restore inclusive 30-day renewal window boundary\" 2>&1 | tail -20",
+   "thinking": "Running: git commit -am \"fix: ATLAS-37 restore inclusive 30-day renewal window boundary\" 2>&1 | tail -20",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:38.076Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:38.076659+00:00",
+   "tool": true,
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Running: uv run pytest 2>&1 | tail -10 && echo \"---ruff (atlas only, scoped to fix)---\" && uv run ruff check atlas 2>&1 | tail -1",
+   "thinking": "Running: uv run pytest 2>&1 | tail -10 && echo \"---ruff (atlas only, scoped to fix)---\" && uv run ruff check atlas 2>&1 | tail -1",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:50.124Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:50.124009+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "Full suite is green, `atlas/` is ruff-clean, and both commits are in place. Not pushed, no migrations/dependencies/business-rule constants touched.\n\n```json\n{\"root_cause\": \"Commit 8e42e68 (\\\"Simplify renewal window arithmetic\\\") changed renewal_window() to return today + timedelta(days=days-1) instead of today + timedelta(days=days), silently breaking the documented inclusive-both-ends 30-day window. The same commit deleted the test assertions that would have caught it, so policies expiring exactly on the boundary (e.g. 2026-10-16 for a 30-day run) stopped appearing in the renewal run while the reconcile endpoint's independent expected-count query still used the correct today+days math, producing the window_mismatch 422.\", \"fix\": \"Reverted the one-line arithmetic change in atlas/domain/renewals.py:23, restoring renewal_window(today, days) to return (today, today + timedelta(days=days)) so the boundary date is included again, matching the docstring and CLAUDE.md's documented intent.\", \"test\": \"Restored/extended tests/test_renewals.py::test_window_is_inclusive_of_both_ends to assert renewal_window(date(2026,9,1), 30) == (date(2026,9,1), date(2026,10,1)) and that a policy expiring exactly 30 days out is due; also restored test_late_evening_sydney_renewal_is_not_pulled_a_day_early's expiry_date back to date(2026,10,1). Both failed against the buggy code (confirmed before the fix commit) and pass now, proving the boundary is fixed and guarded.\", \"not_changed\": \"Left a pre-existing, unrelated ruff F401 (unused `timedelta` import) in tests/test_api.py untouched \u2014 it predates this change (reproduced on the branch before my edits via git stash) and is outside this ticket's scope; flagging it separately rather than folding it into this PR.\", \"commits\": [\"3b3c595 test: ATLAS-37 reproduce renewal window off-by-one at 30-day boundary\", \"ea70484 fix: ATLAS-37 restore inclusive 30-day renewal window boundary\"], \"confidence\": 0.95}\n```",
+   "thinking": "Full suite is green, `atlas/` is ruff-clean, and both commits are in place. Not pushed, no migrations/dependencies/business-rule constants touched.\n\n```json\n{\"root_cause\": \"Commit 8e42e68 (\\\"Simplify renewal window arithmetic\\\") changed renewal_window() to return today + timedelta(days=days-1) instead of today + timedelta(days=days), silently breaking the documented inclusive-both-ends 30-day window. The same commit deleted the test assertions that would have caught it, so policies expiring exactly on the boundary (e.g. 2026-10-16 for a 30-day run) stopped appearing in the renewal run while the reconcile endpoint's independent expected-count query still used the correct today+days math, producing the window_mismatch 422.\", \"fix\": \"Reverted the one-line arithmetic change in atlas/domain/renewals.py:23, restoring renewal_window(today, days) to return (today, today + timedelta(days=days)) so the boundary date is included again, matching the docstring and CLAUDE.md's documented intent.\", \"test\": \"Restored/extended tests/test_renewals.py::test_window_is_inclusive_of_both_ends to assert renewal_window(date(2026,9,1), 30) == (date(2026,9,1), date(2026,10,1)) and that a policy expiring exactly 30 days out is due; also restored test_late_evening_sydney_renewal_is_not_pulled_a_day_early's expiry_date back to date(2026,10,1). Both failed against the buggy code (confirmed before the fix commit) and pass now, proving the boundary is fixed and guarded.\", \"not_changed\": \"Left a pre-existing, unrelated ruff F401 (unused `timedelta` import) in tests/test_api.py untouched \u2014 it predates this change (reproduced on the branch before my edits via git stash) and is outside this ticket's scope; flagging it separately rather than folding it into this PR.\", \"commits\": [\"3b3c595 test: ATLAS-37 reproduce renewal window off-by-one at 30-day boundary\", \"ea70484 fix: ATLAS-37 restore inclusive 30-day renewal window boundary\"], \"confidence\": 0.95}\n```",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.0917309,
+    "seconds": 32.338353872299194,
+    "tokens_in": 100250,
+    "tokens_out": 3009,
+    "model_calls": 5
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:53.545Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:53.545423+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "scout",
+    "display_name": "Scout"
+   },
+   "status": "idle",
+   "summary": "Waiting for work",
+   "thinking": "Waiting for work",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": false,
+    "can_create_tickets": true,
+    "must_escalate_when": [
+     "security_impact",
+     "customer_impact_over_500"
+    ],
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "heartbeat": true
+  },
+  "source": "atlas.scout",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:53.813Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:53.813669+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "working",
+   "ticket": "ATLAS-37",
+   "summary": "My own verification failed, so I am not opening a PR: ruff is not clean:\nF401 [*] `datetime.timedelta` imported but unused\n --> tests/test_api.py:1:28\n  |\n1 | from datetime import date, timedelta\n  |                            ^^^^^^^^^\nhelp: Remove unused import: `datetime.timedelta`\n  |\n  - from datetime import date, timedelta\n1 + from datetime import date\n2 |\n  |\n\nFound 1 error.\n[*] 1 fixable with the `--fix` option.\n",
+   "thinking": "My own verification failed, so I am not opening a PR: ruff is not clean:\nF401 [*] `datetime.timedelta` imported but unused\n --> tests/test_api.py:1:28\n  |\n1 | from datetime import date, timedelta\n  |                            ^^^^^^^^^\nhelp: Remove unused import: `datetime.timedelta`\n  |\n  - from datetime import date, timedelta\n1 + from datetime import date\n2 |\n  |\n\nFound 1 error.\n[*] 1 fixable with the `--fix` option.\n",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.25299910000000003,
+    "seconds": 80.03163719177246,
+    "tokens_in": 619857,
+    "tokens_out": 6248,
+    "model_calls": 19
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:53.883Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:53.883622+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "status": "blocked",
+   "ticket": "ATLAS-37",
+   "summary": "Stuck on ATLAS-37: Verification failed: ruff is not clean:\nF401 [*] `datetime.timedelta` imported but unused\n --> tests/test_api.py:1:28\n  ",
+   "thinking": "Stuck on ATLAS-37: Verification failed: ruff is not clean:\nF401 [*] `datetime.timedelta` imported but unused\n --> tests/test_api.py:1:28\n  ",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.25299910000000003,
+    "seconds": 80.03163719177246,
+    "tokens_in": 619857,
+    "tokens_out": 6248,
+    "model_calls": 19
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "agent.status"
+ },
+ {
+  "time": "2026-09-15T22:19:53.831Z",
+  "detail": {
+   "to": "maroun",
+   "ts": "2026-09-15T22:19:53.831Z",
+   "lab": "atlas-agentic-lab",
+   "body": "I could not complete this safely: Verification failed: ruff is not clean:\nF401 [*] `datetime.timedelta` imported but unused\n --> tests/test_api.py:1:28\n  |\n1 | from datetime import date, timedelta\n  |                            ^^^^^^^^^\nhelp: Remove unused import: `datetime.timedelta`\n  |\n  - from datetime import date, timedelta\n1 + from datetime import date\n2 |\n  |\n\nFound 1 error.\n[*] 1 fixable with the `--fix` option.\n\n\nLeaving it for a human.",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "issue": {
+    "key": "ATLAS-37",
+    "type": "Bug",
+    "title": "Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run",
+    "labels": [
+     "production",
+     "business_rule",
+     "sig:590d9629"
+    ],
+    "pr_url": null,
+    "status": "Triage",
+    "assignee": "maroun",
+    "priority": "High"
+   },
+   "ticket": "ATLAS-37",
+   "summary": "Escalated ATLAS-37 to Maroun: I could not complete this safely: Verification failed: ruff is not clean:",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "escalation": true
+  },
+  "source": "atlas.board",
+  "detail-type": "issue.assigned"
+ },
+ {
+  "time": "2026-09-15T22:19:53.860Z",
+  "detail": {
+   "to": "Triage",
+   "ts": "2026-09-15T22:19:53.860Z",
+   "lab": "atlas-agentic-lab",
+   "from": "In Progress",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "issue": {
+    "key": "ATLAS-37",
+    "type": "Bug",
+    "title": "Renewals reconcile fails: 4 policies expiring 2026-10-16 missing from 30-day run",
+    "labels": [
+     "production",
+     "business_rule",
+     "sig:590d9629"
+    ],
+    "pr_url": null,
+    "status": "Triage",
+    "assignee": "maroun",
+    "priority": "High"
+   },
+   "fields": [
+    "status",
+    "assignee"
+   ],
+   "ticket": "ATLAS-37",
+   "summary": "ATLAS-37 moved to Triage pending Maroun",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   }
+  },
+  "source": "atlas.board",
+  "detail-type": "issue.updated"
+ },
+ {
+  "time": "2026-09-15T22:19:53.871Z",
+  "detail": {
+   "ts": "2026-09-15T22:19:53.871352+00:00",
+   "actor": {
+    "kind": "agent",
+    "mode": "autonomous",
+    "handle": "forge",
+    "display_name": "Forge"
+   },
+   "ticket": "ATLAS-37",
+   "summary": "Could not complete ATLAS-37: Verification failed: ruff is not clean:\nF401 [*] `datetime.timedelta` imported but unused\n --> tests/test_api.py:1:28\n  |\n1 | from datetime import date, timedel",
+   "category": "agent_failure",
+   "authority": {
+    "can_merge": false,
+    "can_deploy": false,
+    "can_review": false,
+    "can_write_code": true,
+    "can_change_schema": false,
+    "can_create_tickets": false,
+    "must_escalate_when": [
+     "ambiguous_requirement",
+     "business_rule_change",
+     "security_impact",
+     "data_migration",
+     "cost_over_threshold"
+    ],
+    "can_open_pull_requests": true,
+    "can_change_business_rules": false,
+    "can_read_production_telemetry": true
+   },
+   "telemetry": {
+    "usd": 0.25299910000000003,
+    "seconds": 80.03163719177246,
+    "tokens_in": 619857,
+    "tokens_out": 6248,
+    "model_calls": 19
+   }
+  },
+  "source": "atlas.forge",
+  "detail-type": "escalation.raised"
+ }
+]
